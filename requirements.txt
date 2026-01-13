@@ -1,33 +1,112 @@
-# Core dependencies
+# ============================================
+# MicroLLM-PrivateStack Dependencies
+# Tested on Python 3.9+ | Total size: ~2.5GB
+# ============================================
+
+# Core Web Framework
 flask==3.0.0
 flask-cors==4.0.0
 flask-jwt-extended==4.6.0
+werkzeug==3.0.1              # Flask dependency, pin for security
+
+# Environment & Configuration
 python-dotenv==1.0.0
 pydantic==2.5.0
+pyyaml==6.0.1
 
-# LLM inference
-llama-cpp-python==0.2.36
+# ============================================
+# LLM Inference (Core)
+# ============================================
+llama-cpp-python==0.2.36     # Primary LLM engine
+# Note: Use CMAKE_ARGS for GPU support:
+# CMAKE_ARGS="-DLLAMA_CUBLAS=on" pip install llama-cpp-python
 
+# Alternative/Backup (uncomment if needed)
+# transformers==4.36.0       # HuggingFace Transformers (backup option)
+# torch==2.1.0              # PyTorch (only if not using llama-cpp)
+
+# ============================================
 # RAG & Embeddings
-sentence-transformers==2.2.2
+# ============================================
+sentence-transformers==2.2.2  # Semantic embeddings (MiniLM)
 numpy==1.24.3
-faiss-cpu==1.7.4
+faiss-cpu==1.7.4             # Vector similarity search
+# faiss-gpu==1.7.4           # Uncomment for GPU acceleration
 
-# Security
+# Document Processing
+langchain==0.1.0             # RAG orchestration (optional but recommended)
+chromadb==0.4.22             # Alternative vector DB (lighter than faiss)
+pypdf==3.17.4                # PDF parsing
+python-docx==1.1.0           # Word document parsing
+openpyxl==3.1.2              # Excel file support
+
+# ============================================
+# Security & Authentication
+# ============================================
 bcrypt==4.1.2
 cryptography==41.0.7
+pyjwt==2.8.0                 # JWT encoding/decoding
+python-multipart==0.0.6      # Form data parsing
 
-# Monitoring
-prometheus-client==0.19.0
+# ============================================
+# Database
+# ============================================
+sqlalchemy==2.0.25           # ORM for user/vector DB
+alembic==1.13.1              # Database migrations
 
-# Utilities
-pyyaml==6.0.1
+# ============================================
+# Observability & Monitoring
+# ============================================
+prometheus-client==0.19.0    # Metrics export
+loguru==0.7.2                # Advanced logging (better than stdlib)
+
+# ============================================
+# HTTP & Utilities
+# ============================================
 requests==2.31.0
-python-magic==0.4.27
+httpx==0.25.2                # Async HTTP client
+aiofiles==23.2.1             # Async file operations
+python-magic==0.4.27         # File type detection
+pillow==10.1.0               # Image processing (for UI assets)
 
-# Development
+# ============================================
+# Data Validation & Processing
+# ============================================
+pydantic-settings==2.1.0     # Settings management
+marshmallow==3.20.1          # Serialization
+pandas==2.1.4                # Data analysis (for spreadsheet parsing)
+
+# ============================================
+# Rate Limiting & Cache
+# ============================================
+flask-limiter==3.5.0         # Rate limiting
+redis==5.0.1                 # Cache backend (optional, for production)
+cachetools==5.3.2            # In-memory caching utilities
+
+# ============================================
+# Development & Testing
+# ============================================
 pytest==7.4.3
 pytest-cov==4.1.0
-black==23.12.1
-flake8==7.0.0
-mypy==1.8.0
+pytest-asyncio==0.23.2       # Async testing
+httpx-test==0.25.0           # API testing
+
+# Code Quality
+black==23.12.1               # Code formatter
+flake8==7.0.0                # Linter
+mypy==1.8.0                  # Type checker
+isort==5.13.2                # Import sorter
+pylint==3.0.3                # Additional linting
+
+# ============================================
+# Production Server (WSGI)
+# ============================================
+gunicorn==21.2.0             # Production WSGI server
+gevent==23.9.1               # Async workers for gunicorn
+
+# ============================================
+# Optional: Advanced Features
+# ============================================
+# streamlit==1.29.0          # Quick admin dashboard
+# celery==5.3.4              # Background task queue
+# flower==2.0.1              # Celery monitoring

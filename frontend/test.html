@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MicroLLM-PrivateStack - Test Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        .test-section {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        h1 { color: #6366f1; }
+        h2 { color: #818cf8; margin-top: 0; }
+        button {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+        pre {
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border-left: 4px solid #6366f1;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .status.success { background: #10b981; color: white; }
+        .status.error { background: #ef4444; color: white; }
+        .status.pending { background: #f59e0b; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🚀 MicroLLM-PrivateStack - Sprint 1 Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>1. Health Check</h2>
+        <p>Test if API server is running</p>
+        <button onclick="testHealth()">Test /health</button>
+        <div id="health-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Model Info</h2>
+        <p>Check model loading status</p>
+        <button onclick="testModelInfo()">Test /api/model/info</button>
+        <div id="model-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Chat API (Demo Mode)</h2>
+        <p>Send a test message to the LLM</p>
+        <button onclick="testChat()">Test /api/chat</button>
+        <div id="chat-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Frontend UI</h2>
+        <p>Open the main chat interface</p>
+        <button onclick="window.open('index.html', '_blank')">Open Chat UI</button>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            resultDiv.innerHTML = '<p class="status pending">Testing...</p>';
+            
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <p class="status success">✓ SUCCESS</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="status error">✗ FAILED</p>
+                    <pre>${error.message}</pre>
+                    <p>Make sure API server is running: python backend/api_gateway.py</p>
+                `;
+            }
+        }
+        
+        async function testModelInfo() {
+            const resultDiv = document.getElementById('model-result');
+            resultDiv.innerHTML = '<p class="status pending">Testing...</p>';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/model/info`);
+                const data = await response.json();
+                
+                const status = data.loaded ? 'Real LLM Loaded ✓' : 'Demo Mode (Mock Responses)';
+                
+                resultDiv.innerHTML = `
+                    <p class="status ${data.loaded ? 'success' : 'pending'}">${status}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="status error">✗ FAILED</p>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+        
+        async function testChat() {
+            const resultDiv = document.getElementById('chat-result');
+            resultDiv.innerHTML = '<p class="status pending">Sending test message...</p>';
+            
+            const testMessage = "What are the top 3 risks in market expansion?";
+            
+            try {
+                const response = await fetch(`${API_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: testMessage
+                    })
+                });
+                
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <p class="status success">✓ Response Received</p>
+                    <p><strong>Your Message:</strong> ${testMessage}</p>
+                    <p><strong>Response:</strong></p>
+                    <pre>${data.response}</pre>
+                    <p><strong>Full JSON:</strong></p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="status error">✗ FAILED</p>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+        
+        // Auto-run health check on load
+        window.addEventListener('load', () => {
+            setTimeout(testHealth, 500);
+        });
+    </script>
+</body>
+</html>

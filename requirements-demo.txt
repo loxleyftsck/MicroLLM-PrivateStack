@@ -1,0 +1,20 @@
+# Core dependencies (NO llama-cpp-python for faster install)
+flask==3.0.0
+flask-cors==4.0.0
+python-dotenv==1.0.0
+werkzeug==3.0.1
+
+# Database
+sqlalchemy==2.0.25
+
+# Security
+bcrypt==4.1.2
+pyjwt==2.8.0
+
+# Utilities
+requests==2.31.0
+pyyaml==6.0.1
+loguru==0.7.2
+
+# Production Server
+gunicorn==21.2.0

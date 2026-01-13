@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MicroLLM Test - Simple</title>
+    <style>
+        body {
+            font-family: system-ui;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        pre {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        .result {
+            margin: 20px 0;
+        }
+        h1 { color: #6366f1; }
+    </style>
+</head>
+<body>
+    <h1>🔍 MicroLLM Debug Test</h1>
+    
+    <div>
+        <h3>Step 1: Test Health</h3>
+        <button onclick="testHealth()">Test /health endpoint</button>
+        <div id="health" class="result"></div>
+    </div>
+    
+    <div>
+        <h3>Step 2: Test Chat</h3>
+        <button onclick="testChat()">Test /api/chat endpoint</button>
+        <div id="chat" class="result"></div>
+    </div>
+    
+    <div>
+        <h3>Step 3: Check Browser Console</h3>
+        <p>Press F12 → Console tab untuk lihat errors</p>
+    </div>
+
+    <script>
+        const API = 'http://localhost:8000';
+        
+        async function testHealth() {
+            const div = document.getElementById('health');
+            div.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                console.log('Fetching:', API + '/health');
+                const res = await fetch(API + '/health');
+                console.log('Response status:', res.status);
+                const data = await res.json();
+                console.log('Response data:', data);
+                
+                div.innerHTML = `
+                    <p style="color: lime">✓ SUCCESS (${res.status})</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (err) {
+                console.error('Error:', err);
+                div.innerHTML = `
+                    <p style="color: red">✗ FAILED</p>
+                    <pre>${err.message}</pre>
+                    <p>Check:
+                    1. API server running? (python backend/api_gateway.py)
+                    2. Port 8000 correct?
+                    3. Browser console for CORS errors (F12)</p>
+                `;
+            }
+        }
+        
+        async function testChat() {
+            const div = document.getElementById('chat');
+            div.innerHTML = '<p>Sending message...</p>';
+            
+            try {
+                console.log('Posting to:', API + '/api/chat');
+                const res = await fetch(API + '/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: 'Hello test'})
+                });
+                console.log('Response status:', res.status);
+                const data = await res.json();
+                console.log('Response data:', data);
+                
+                div.innerHTML = `
+                    <p style="color: lime">✓ SUCCESS (${res.status})</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (err) {
+                console.error('Error:', err);
+                div.innerHTML = `
+                    <p style="color: red">✗ FAILED</p>
+                    <pre>${err.message}</pre>
+                `;
+            }
+        }
+        
+        // Auto-run health check
+        window.onload = () => {
+            setTimeout(testHealth, 500);
+        };
+    </script>
+</body>
+</html>
