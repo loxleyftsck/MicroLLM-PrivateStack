@@ -1,0 +1,3 @@
+# Placeholder for models
+# Download models separately using scripts/download_model.sh
+# Models are excluded from git due to size (see .gitignore)

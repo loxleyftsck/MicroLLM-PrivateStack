@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MicroLLM-PrivateStack | Private AI Assistant</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <header class="header">
+        <div class="logo">
+          <h1>🚀 MicroLLM-PrivateStack</h1>
+          <p class="tagline">Private AI Decision Support System</p>
+        </div>
+        <div class="status">
+          <span class="status-indicator" id="statusIndicator"></span>
+          <span id="statusText">Connecting...</span>
+        </div>
+      </header>
+
+      <!-- Main Chat Interface -->
+      <main class="chat-container">
+        <div class="messages" id="messages">
+          <div class="message system">
+            <strong>System:</strong> Welcome to MicroLLM-PrivateStack! 100%
+            private, on-premise AI assistance.
+          </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-container">
+          <textarea
+            id="messageInput"
+            placeholder="Ask anything... (e.g., 'Analyze Q1 sales performance')"
+            rows="3"
+          ></textarea>
+          <button id="sendButton" class="send-btn">
+            <span>Send</span>
+          </button>
+        </div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <div class="footer-info">
+          <span>🔒 100% Private</span>
+          <span>⚡ 2GB RAM</span>
+          <span>🧠 DeepSeek-R1 1.5B</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
