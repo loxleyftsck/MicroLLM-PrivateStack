@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MicroLLM-PrivateStack | Enterprise AI Operating System</title>
+    <link rel="stylesheet" href="styles/enterprise.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="enterprise-container">
+        
+        <!-- Header -->
+        <header class="enterprise-header">
+            <div class="header-left">
+                <div class="logo">
+                    <div class="logo-icon">🧠</div>
+                    <span class="logo-text">MicroLLM-PrivateStack</span>
+                </div>
+                <div class="status-badge secure">
+                    <span class="status-dot"></span>
+                    Secure Channel
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="system-status">
+                    <span class="status-label">STATUS:</span>
+                    <span class="status-value online">ONLINE</span>
+                    <span class="status-value">|</span>
+                    <span class="status-value encrypted">ENCRYPTED</span>
+                    <span class="status-value">|</span>
+                    <span class="status-value private">PRIVATE</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Grid Layout -->
+        <div class="main-grid">
+            
+            <!-- LEFT SIDEBAR: Model & Stack Control -->
+            <aside class="left-sidebar">
+                <div class="sidebar-section">
+                    <h3 class="section-title">MODELS</h3>
+                    <div class="model-list">
+                        <div class="model-item active">
+                            <div class="model-name">Llama-3-70B</div>
+                            <div class="model-params">70B params</div>
+                            <div class="model-indicator"></div>
+                        </div>
+                        <div class="model-item">
+                            <div class="model-name">Mistral-Large</div>
+                            <div class="model-params">123B params</div>
+                        </div>
+                        <div class="model-item">
+                            <div class="model-name">Phi-3-Mini</div>
+                            <div class="model-params">3.8B params</div>
+                        </div>
+                        <div class="model-item">
+                            <div class="model-name">DeepSeek-R1-1.5B</div>
+                            <div class="model-params">1.5B params</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="section-title">RAM USAGE</h3>
+                    <div class="usage-bars">
+                        <div class="usage-item">
+                            <div class="usage-label">
+                                <span>64GB / 128GB</span>
+                                <span class="usage-percent">~50%</span>
+                            </div>
+                            <div class="usage-bar">
+                                <div class="usage-fill" style="width: 50%"></div>
+                            </div>
+                        </div>
+                        <div class="usage-item">
+                            <div class="usage-label">
+                                <span>64GB / 128GB</span>
+                                <span class="usage-percent">~50%</span>
+                            </div>
+                            <div class="usage-bar">
+                                <div class="usage-fill" style="width: 50%"></div>
+                            </div>
+                        </div>
+                        <div class="usage-item">
+                            <div class="usage-label">
+                                <span>54GB / 128GB</span>
+                                <span class="usage-percent">~42%</span>
+                            </div>
+                            <div class="usage-bar">
+                                <div class="usage-fill" style="width: 42%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="section-title">SYSTEM</h3>
+                    <div class="system-gauges">
+                        <div class="gauge">
+                            <div class="gauge-circle">
+                                <svg viewBox="0 0 100 100">
+                                    <circle class="gauge-bg" cx="50" cy="50" r="45"></circle>
+                                    <circle class="gauge-progress" cx="50" cy="50" r="45" 
+                                            style="stroke-dashoffset: calc(283 - (283 * 35) / 100)"></circle>
+                                </svg>
+                                <div class="gauge-value">35%</div>
+                            </div>
+                            <div class="gauge-label">CPU</div>
+                        </div>
+                        <div class="gauge">
+                            <div class="gauge-circle">
+                                <svg viewBox="0 0 100 100">
+                                    <circle class="gauge-bg" cx="50" cy="50" r="45"></circle>
+                                    <circle class="gauge-progress" cx="50" cy="50" r="45"
+                                            style="stroke-dashoffset: calc(283 - (283 * 50) / 100)"></circle>
+                                </svg>
+                                <div class="gauge-value">50%</div>
+                            </div>
+                            <div class="gauge-label">GPU</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="section-title">CONTROLS</h3>
+                    <div class="toggle-controls">
+                        <div class="toggle-item">
+                            <div class="toggle-label">
+                                <span class="toggle-icon">📡</span>
+                                <span>OFFLINE MODE</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="offlineMode" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-item">
+                            <div class="toggle-label">
+                                <span class="toggle-icon">🔐</span>
+                                <span>ENCRYPTION</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="encryption" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-item">
+                            <div class="toggle-label">
+                                <span class="toggle-icon">🧠</span>
+                                <span>LOCAL MEMORY</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="localMemory" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- CENTER: Chat + Reasoning Engine -->
+            <main class="center-workspace">
+                <div class="chat-header">
+                    <div class="chat-title">Secure Inference Channel</div>
+                    <div class="chat-actions">
+                        <button class="btn-icon" title="New Chat">
+                            <span>➕</span>
+                        </button>
+                        <button class="btn-icon" title="Export">
+                            <span>⬇️</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Example AI Message -->
+                    <div class="message ai-message">
+                        <div class="message-avatar">🤖</div>
+                        <div class="message-content">
+                            <div class="message-text">
+                                Here is a detailed analysis of the system logs.
+                                <button class="expand-btn">→</button>
+                            </div>
+                            <div class="message-meta">
+                                <div class="reasoning-panel" style="display: none;">
+                                    <div class="panel-header">Reasoning Trace</div>
+                                    <div class="panel-content">
+                                        There detailed analysis of the system logs informs you can...
+                                    </div>
+                                </div>
+                                <div class="token-flow">
+                                    <div class="flow-label">Token Flow</div>
+                                    <div class="flow-viz">
+                                        <span class="token-dot"></span>
+                                        <span class="token-dot"></span>
+                                        <span class="token-dot"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="message-stats">
+                                <span class="stat">TOKENS: 128</span>
+                                <span class="stat">|</span>
+                                <span class="stat">LATENCY: 0.5s</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Memory State Indicator -->
+                    <div class="memory-state">
+                        <span class="memory-icon">●</span>
+                        <span class="memory-text">Memory State: Active</span>
+                        <div class="memory-graph">
+                            <div class="memory-line"></div>
+                        </div>
+                    </div>
+
+                    <!-- Example User Message -->
+                    <div class="message user-message">
+                        <div class="message-content">
+                            <div class="message-text">
+                                Show me the latest security alerts.
+                            </div>
+                            <div class="message-stats">
+                                <span class="stat">TOKENS: 128</span>
+                                <span class="stat">|</span>
+                                <span class="stat">LATENCY: 0.5s</span>
+                            </div>
+                        </div>
+                        <div class="message-avatar">👤</div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="chatInput" 
+                            class="chat-input" 
+                            placeholder="Enter your query... (Secured & Encrypted)"
+                            rows="1"
+                        ></textarea>
+                        <button class="send-btn" id="sendBtn">
+                            <span>▶</span>
+                        </button>
+                    </div>
+                    <div class="input-meta">
+                        <span class="meta-item">🔐 End-to-End Encrypted</span>
+                        <span class="meta-item">📍 Local Inference</span>
+                        <span class="meta-item">⚡ Real-time</span>
+                    </div>
+                </div>
+            </main>
+
+            <!-- RIGHT PANEL: Pipeline & Tools -->
+            <aside class="right-panel">
+                <div class="panel-header-section">
+                    <h3 class="section-title">PIPELINE FLOW</h3>
+                    <button class="btn-icon-small">⚙️</button>
+                </div>
+
+                <div class="pipeline-canvas">
+                    <div class="pipeline-node prompt-node">
+                        <div class="node-icon">📝</div>
+                        <div class="node-label">PROMPT</div>
+                        <div class="node-sublabel">User Input<br>System Instructions</div>
+                        <div class="node-stats">
+                            <span>Latency: 1ms</span>
+                            <span>Tokens: 128</span>
+                        </div>
+                        <div class="node-indicator active"></div>
+                    </div>
+
+                    <div class="pipeline-connector">
+                        <div class="connector-line">
+                            <div class="connector-flow"></div>
+                        </div>
+                    </div>
+
+                    <div class="pipeline-node model-node">
+                        <div class="node-icon">🧠</div>
+                        <div class="node-label">MODEL</div>
+                        <div class="node-sublabel">LLM Engine (Private)<br>GPU | 8bit Inference</div>
+                        <div class="node-stats">
+                            <span>GPU: Llama-3-70B-Private</span>
+                            <span>Stats: ~850 tokens/min</span>
+                            <span>Type: local</span>
+                            <span>Total tokens: 512</span>
+                        </div>
+                        <div class="node-indicator active"></div>
+                    </div>
+
+                    <div class="pipeline-connector">
+                        <div class="connector-line">
+                            <div class="connector-flow"></div>
+                        </div>
+                    </div>
+
+                    <div class="pipeline-node tools-node">
+                        <div class="node-icon">🛠️</div>
+                        <div class="node-label">TOOLS</div>
+                        <div class="node-sublabel">External APIs &<br>Functions</div>
+                        <div class="node-stats">
+                            <span>Calls: 3</span>
+                            <span>Avg Latency: 50ms</span>
+                            <span>Last Used: 24kb</span>
+                        </div>
+                        <div class="node-indicator"></div>
+                    </div>
+
+                    <div class="pipeline-connector">
+                        <div class="connector-line">
+                            <div class="connector-flow"></div>
+                        </div>
+                    </div>
+
+                    <div class="pipeline-node memory-node">
+                        <div class="node-icon">💾</div>
+                        <div class="node-label">MEMORY</div>
+                        <div class="node-sublabel">Context & History</div>
+                        <div class="node-stats">
+                            <span>Retrieved: 5 items</span>
+                            <span>Vector DB: Milvus</span>
+                            <span>Status: 20ms</span>
+                        </div>
+                        <div class="node-indicator active"></div>
+                    </div>
+
+                    <div class="pipeline-connector">
+                        <div class="connector-line">
+                            <div class="connector-flow"></div>
+                        </div>
+                    </div>
+
+                    <div class="pipeline-node output-node">
+                        <div class="node-icon">💬</div>
+                        <div class="node-label">OUTPUT</div>
+                        <div class="node-sublabel">Generated Response</div>
+                        <div class="node-stats">
+                            <span>Latency: 190ms</span>
+                            <span>Tokens: 256</span>
+                            <span>Confidence: 98%</span>
+                        </div>
+                        <div class="node-indicator active"></div>
+                    </div>
+                </div>
+
+                <div class="pipeline-info">
+                    <div class="info-item">
+                        <span class="info-label">Last Updated:</span>
+                        <span class="info-value">Oct 23, 2024 14:20 UTC</span>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- BOTTOM BAR: System Console -->
+        <footer class="bottom-console">
+            <div class="console-header">
+                <span class="console-title">SYSTEM CONSOLE</span>
+                <div class="console-indicators">
+                    <span class="indicator online">STATUS: ONLINE</span>
+                    <span class="indicator encrypted">| ENCRYPTED</span>
+                    <span class="indicator private">| PRIVATE</span>
+                </div>
+            </div>
+            <div class="console-content" id="consoleContent">
+                <div class="console-line">
+                    <span class="timestamp">[INFO]</span>
+                    <span class="log-text">2024-06-16 18:45:55 -- Model loaded in 2.15s.</span>
+                </div>
+                <div class="console-line">
+                    <span class="timestamp">[INFO]</span>
+                    <span class="log-text">2024-06-16 18:45:35 -- Processing request ID: atko-984...</span>
+                </div>
+                <div class="console-line">
+                    <span class="timestamp">[METRICS]</span>
+                    <span class="log-text">RAM: 45% | GPU: 30% | VRAM: 2GB / 2.5GB</span>
+                </div>
+                <div class="console-line">
+                    <span class="timestamp">[SPEED]</span>
+                    <span class="log-text">Token Speed: 120 t/s</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="scripts/enterprise.js"></script>
+</body>
+</html>
