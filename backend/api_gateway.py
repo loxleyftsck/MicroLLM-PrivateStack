@@ -184,11 +184,19 @@ def chat():
                 "error": "Streaming not yet implemented"
             }), 501
         
+        # ============================================
+        # Format LLM Output (Clean & Structure)
+        # ============================================
+        from llm_formatter import LLMOutputFormatter
+        
+        formatted_response = LLMOutputFormatter.format_response(response)
+        logger.info(f"✅ Response formatted: {len(response)} → {len(formatted_response)} chars")
+        
         # Security check: Output validation (PII, secrets, toxicity)
         if output_guardrail and SECURITY_AVAILABLE:
             validation_result = output_guardrail.validate_output(
                 prompt=message,
-                response=response,
+                response=formatted_response,  # Use formatted response
                 context=None
             )
             
@@ -213,7 +221,7 @@ def chat():
                 "response": safe_response,
                 "status": "success",
                 "model_loaded": llm_engine.model_loaded,
-                "tokens_generated": len(response.split()),
+                "tokens_generated": len(formatted_response.split()),
                 "security": {
                     "validated": True,
                     "confidence_score": validation_result.confidence_score,
