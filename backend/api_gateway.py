@@ -28,6 +28,16 @@ sys.path.insert(0, str(Path(__file__).parent))
 # Import LLM engine
 from llm_engine import LLMEngine
 
+# Import security modules
+try:
+    from security.guardrails import OutputGuardrail, GuardrailResult
+    from security.validators import DataIngestionValidator, ValidationError
+    SECURITY_AVAILABLE = True
+    logger.info("✅ Security modules loaded")
+except ImportError as e:
+    SECURITY_AVAILABLE = False
+    logger.warning(f"⚠️ Security modules not available: {e}")
+
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
@@ -65,6 +75,19 @@ for key, value in llm_config.items():
 
 llm_engine = LLMEngine(llm_config)
 
+# Initialize security guardrails
+if SECURITY_AVAILABLE:
+    output_guardrail = OutputGuardrail({
+        'strict_mode': True,
+        'toxicity_threshold': 0.7,
+        'hallucination_threshold': 0.8,
+        'mask_pii': True
+    })
+    logger.info("✅ Output guardrails initialized")
+else:
+    output_guardrail = None
+    logger.warning("⚠️ Running WITHOUT security guardrails")
+
 logger.info(f"LLM Engine initialized. Model loaded: {llm_engine.model_loaded}")
 logger.info("=" * 70)
 
@@ -85,7 +108,8 @@ def health_check():
 @app.route("/api/chat", methods=["POST"])
 def chat():
     """
-    Chat endpoint - Real LLM inference
+    Chat endpoint - Real LLM inference with security guardrails
+    OWASP ASVS V5.3.1, V5.3.4, V14.4.1
     Optimized for 2GB RAM (max 256 tokens)
     """
     try:
@@ -105,6 +129,23 @@ def chat():
         
         logger.info(f"Chat request: '{message[:50]}...' (max_tokens={max_tokens})")
         
+        # Security check: Input validation (prompt injection detection)
+        if output_guardrail and SECURITY_AVAILABLE:
+            # Pre-check prompt for injection attempts
+            pre_check = output_guardrail._detect_injection(message)
+            if pre_check['detected']:
+                logger.warning(f"⚠️ Prompt injection blocked: {pre_check}")
+                return jsonify({
+                    "error": "Request blocked by security guardrails",
+                    "reason": "Potential prompt injection detected",
+                    "status": "blocked",
+                    "security": {
+                        "asvs_compliance": ["V5.3.1"],
+                        "threat_type": "prompt_injection",
+                        "patterns_detected": len(pre_check['patterns'])
+                    }
+                }), 403
+        
         # Generate response
         response = llm_engine.generate(
             prompt=message,
@@ -120,12 +161,56 @@ def chat():
         
         logger.info(f"Response generated: {len(response)} chars")
         
-        return jsonify({
-            "response": response,
-            "status": "success",
-            "model_loaded": llm_engine.model_loaded,
-            "tokens_generated": len(response.split())  # Approximate
-        }), 200
+        # Security check: Output validation (PII, secrets, toxicity)
+        if output_guardrail and SECURITY_AVAILABLE:
+            validation_result = output_guardrail.validate_output(
+                prompt=message,
+                response=response,
+                context=None
+            )
+            
+            if validation_result.blocked:
+                logger.warning(f"⚠️ Response blocked by guardrails: {validation_result.security_checks}")
+                return jsonify({
+                    "error": "Response blocked by security guardrails",
+                    "status": "blocked",
+                    "security": {
+                        "asvs_compliance": validation_result.asvs_compliance,
+                        "checks": {
+                            k: v for k, v in validation_result.security_checks.items()
+                            if k in ['prompt_injection', 'secrets_leaked', 'toxicity_score']
+                        }
+                    }
+                }), 403
+            
+            # Use sanitized response (PII masked)
+            safe_response = validation_result.response
+            
+            return jsonify({
+                "response": safe_response,
+                "status": "success",
+                "model_loaded": llm_engine.model_loaded,
+                "tokens_generated": len(response.split()),
+                "security": {
+                    "validated": True,
+                    "confidence_score": validation_result.confidence_score,
+                    "warnings": validation_result.warnings,
+                    "asvs_compliance": validation_result.asvs_compliance
+                }
+            }), 200
+        else:
+            # No security validation (fallback)
+            logger.warning("⚠️ Responding WITHOUT security validation")
+            return jsonify({
+                "response": response,
+                "status": "success",
+                "model_loaded": llm_engine.model_loaded,
+                "tokens_generated": len(response.split()),
+                "security": {
+                    "validated": False,
+                    "warning": "Security modules not available"
+                }
+            }), 200
         
     except Exception as e:
         logger.exception(f"Chat endpoint error: {e}")
