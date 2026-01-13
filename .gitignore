@@ -1,77 +1,39 @@
-# Byte-compiled / optimized / DLL files
+# Ignore database
+data/
+*.db
+*.db-journal
+
+# Ignore credentials
+CREDENTIALS.txt
+.env
+*.env
+
+# Ignore logs
+logs/
+*.log
+
+# Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-
-# Distribution / packaging
+*.pyc
+*.pyo
+*.pyd
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
-venv/
-ENV/
-env/
-.venv
 
 # IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# Environment variables
-.env
-.env.local
-
-# Models (too large for git)
-models/*.gguf
-models/*.bin
-models/*.safetensors
-
-# Data files
-data/*.db
-data/*.sqlite
-data/vector_store/
-
-# Logs
-logs/*.log
-*.log
-
-# Cache
-.cache/
-*.cache
-
-# OS files
+# OS
 .DS_Store
 Thumbs.db
-desktop.ini
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
+# Backups
+backups/
+*.bak
 
 # Temporary files
 tmp/
 temp/
 *.tmp
-
-# Docker
-.dockerignore
