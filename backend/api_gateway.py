@@ -89,7 +89,30 @@ else:
     logger.warning("⚠️ Running WITHOUT security guardrails")
 
 logger.info(f"LLM Engine initialized. Model loaded: {llm_engine.model_loaded}")
-logger.info("=" * 70)
+
+# ============================================
+# Initialize Database and Authentication
+# ============================================
+from database import DatabaseManager
+from auth import AuthManager
+
+try:
+    # Initialize database
+    db = DatabaseManager(db_path='data/microllm.db')
+    logger.info(f"✅ Database initialized: {db.get_stats()}")
+    
+    # Initialize auth manager
+    JWT_SECRET = app.config["JWT_SECRET_KEY"]
+    auth = AuthManager(secret_key=JWT_SECRET, db_manager=db)
+    logger.info("✅ Authentication system ready")
+    
+except Exception as e:
+    logger.error(f"❌ Database/Auth initialization failed: {e}")
+    logger.warning("⚠️ Running in LIMITED MODE without auth")
+    db = None
+    auth = None
+
+logger.info("=\" * 70)
 
 
 @app.route("/health", methods=["GET"])
