@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MicroLLM-PrivateStack | Corporate AI Workspace</title>
     <link rel="stylesheet" href="styles/corporate.css">
+    <link rel="stylesheet" href="styles/compliance-cards.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -75,25 +76,30 @@
             <div class="chat-container" id="chatContainer">
                 <!-- Welcome message -->
                 <div class="welcome-card">
-                    <h2>Welcome to MicroLLM-PrivateStack</h2>
-                    <p>Ask questions, analyze documents, and draft reports with your private AI assistant.</p>
-                    <div class="quick-actions">
-                        <button class="quick-action-btn">
-                            <span class="action-icon">📊</span>
-                            <span>Analyze Report</span>
-                        </button>
-                        <button class="quick-action-btn">
-                            <span class="action-icon">📝</span>
-                            <span>Draft Summary</span>
-                        </button>
-                        <button class="quick-action-btn">
-                            <span class="action-icon">🔍</span>
-                            <span>Search Documents</span>
-                        </button>
+                    <div class="welcome-header">
+                        <h2>Private AI Workspace</h2>
+                        <p class="welcome-subtitle">Confidential. Compliant. On-premise.</p>
+                    </div>
+                    <div class="welcome-features">
+                        <div class="feature-item">
+                            <span class="feature-check">✓</span>
+                            <span>Your data never leaves your company</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-check">✓</span>
+                            <span>GDPR, SOC 2, ISO 27001 compliant</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-check">✓</span>
+                            <span>End-to-end encrypted</span>
+                        </div>
+                    </div>
+                    <div class="welcome-cta">
+                        <p class="cta-text">Ask a question to get started</p>
                     </div>
                 </div>
                 
-                <!-- Chat messages will be added here -->
+                <!-- Business document responses will appear here -->
             </div>
             
             <div class="input-area">
@@ -114,57 +120,110 @@
             </div>
         </main>
         
-        <!-- RIGHT PANEL: AI Details (Collapsible) -->
-        <aside class="ai-details" id="aiDetails">
+        <!-- RIGHT PANEL: Compliance & Security Dashboard -->
+        <aside class="compliance-panel" id="compliancePanel">
             <div class="panel-header">
-                <h3 class="panel-title">AI Details</h3>
+                <h3 class="panel-title">Compliance & Security</h3>
                 <button class="collapse-btn" id="collapseBtn" title="Collapse panel">
                     <span>−</span>
                 </button>
             </div>
             
             <div class="panel-content">
-                <div class="detail-section">
-                    <div class="section-label">Model in use</div>
-                    <div class="section-value" id="modelName">Loading...</div>
-                    <div class="status-indicator">
-                        <span class="status-dot active"></span>
-                        <span class="status-text">Active</span>
+                <!-- Model Governance -->
+                <div class="compliance-card">
+                    <div class="card-header">
+                        <span class="card-icon">✓</span>
+                        <h4 class="card-title">Model Governance</h4>
                     </div>
-                </div>
-                
-                <div class="detail-section">
-                    <div class="section-label">Data sources</div>
-                    <div class="section-value">Company Documents Only</div>
-                    <div class="section-note">No external data</div>
-                </div>
-                
-                <div class="detail-section">
-                    <div class="section-label">Security</div>
-                    <div class="section-value" id="encryptionType">AES-256</div>
-                    <div class="section-value" id="complianceInfo">GDPR, SOC 2</div>
-                    <div class="security-badge-small">
-                        <span class="badge-icon-small">🔐</span>
-                        <span>Private & Secure</span>
-                    </div>
-                </div>
-                
-                <div class="detail-section">
-                    <div class="section-label">Memory scope</div>
-                    <div class="section-value">This conversation only</div>
-                    <div class="section-note">No training data used</div>
-                </div>
-                
-                <div class="detail-section">
-                    <div class="section-label">System resources</div>
-                    <div class="resource-info" id="resourceInfo">
-                        <div class="resource-item">
-                            <span class="resource-label">RAM:</span>
-                            <span class="resource-value" id="ramUsage">Loading...</span>
+                    <div class="card-body">
+                        <div class="detail-row">
+                            <span class="detail-label">Model:</span>
+                            <span class="detail-value" id="modelName">DeepSeek-R1-1.5B</span>
                         </div>
-                        <div class="resource-item">
-                            <span class="resource-label">Status:</span>
-                            <span class="resource-value" id="systemStatus">Optimal</span>
+                        <div class="detail-row">
+                            <span class="detail-label">Version:</span>
+                            <span class="detail-value">1.0.2</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Last Audit:</span>
+                            <span class="detail-value">Jan 14, 2026</span>
+                        </div>
+                        <div class="compliance-badge success">
+                            <span class="badge-check">✓</span>
+                            <span>Compliant</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Data Scope -->
+                <div class="compliance-card">
+                    <div class="card-header">
+                        <span class="card-icon">🔒</span>
+                        <h4 class="card-title">Data Scope</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="detail-row">
+                            <span class="detail-label">Source:</span>
+                            <span class="detail-value">Company Documents Only</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Residency:</span>
+                            <span class="detail-value">On-premise</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">External APIs:</span>
+                            <span class="detail-value">None</span>
+                        </div>
+                        <div class="compliance-badge private">
+                            <span class="badge-check">✓</span>
+                            <span>Private</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Security Standards -->
+                <div class="compliance-card">
+                    <div class="card-header">
+                        <span class="card-icon">🛡️</span>
+                        <h4 class="card-title">Security Standards</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="detail-row">
+                            <span class="detail-label">Encryption:</span>
+                            <span class="detail-value">AES-256-GCM</span>
+                        </div>
+                        <div class="compliance-badges">
+                            <span class="standard-badge">GDPR</span>
+                            <span class="standard-badge">SOC 2</span>
+                            <span class="standard-badge">ISO 27001</span>
+                        </div>
+                        <div class="audit-ready-badge">Audit Ready</div>
+                    </div>
+                </div>
+                
+                <!-- Memory & Privacy -->
+                <div class="compliance-card">
+                    <div class="card-header">
+                        <span class="card-icon">💾</span>
+                        <h4 class="card-title">Memory & Privacy</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="detail-row">
+                            <span class="detail-label">Scope:</span>
+                            <span class="detail-value">This conversation</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Training:</span>
+                            <span class="detail-value">No data used</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Retention:</span>
+                            <span class="detail-value">Session only</span>
+                        </div>
+                        <div class="compliance-badge ephemeral">
+                            <span class="badge-check">✓</span>
+                            <span>Ephemeral</span>
                         </div>
                     </div>
                 </div>
