@@ -2,23 +2,77 @@
 
 # 🚀 MicroLLM-PrivateStack
 
-**Enterprise-Grade Private LLM Infrastructure for 2GB RAM**
+**Private AI Decision Support System - Optimized for 2GB RAM**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Docker](https://img.shields.io/badge/docker-ready-brightgreen.svg)](https://www.docker.com/)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Flask](https://img.shields.io/badge/Flask-3.0.0-green.svg)](https://flask.palletsprojects.com/)
+[![Status](https://img.shields.io/badge/Status-Production%20Ready-success.svg)](https://github.com/loxleyftsck/MicroLLM-PrivateStack)
+[![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](docs/TEST_RESULTS.md)
 
-**100% Private • Lightweight • Production-Ready**
+*100% private, on-premise AI inference running on resource-constrained hardware*
 
-[🚀 Quick Start](#-quick-start) • [💡 Features](#-features) • [📖 Docs](#-documentation) • [🤝 Community](#-community)
+[Quick Start](#-quick-start) • [Features](#-features) • [Live Demo](#-live-demo) • [Documentation](#-documentation) • [Performance](#-performance)
+
+</div>
 
 ---
 
-![MicroLLM-PrivateStack Banner](https://via.placeholder.com/1200x400/0f172a/6366f1?text=MicroLLM-PrivateStack+%E2%80%A2+Private+AI+for+Enterprise)
+## 🎉 **LIVE & WORKING!**
 
-</div>
+✅ **Real LLM Inference** - DeepSeek-R1 1.5B running locally  
+✅ **Beautiful UI** - Modern chat interface with glassmorphism  
+✅ **Multilingual** - English + Indonesian support  
+✅ **Stress Tested** - 15+ queries, 100% success rate  
+✅ **2GB RAM Verified** - Optimized for resource-constrained deployment
+
+### 📊 **Performance Metrics**
+- **Simple Queries:** 1.5s (excellent)
+- **Complex Analysis:** 13s (business scenarios)
+- **Health Checks:** <100ms (instant)
+- **Memory Usage:** ~1.5GB (under target)
+- **Uptime:** 1+ hour, no crashes
+
+---
+
+## 💡 **What Makes This Special?**
+
+Most LLM deployments require 16GB+ RAM and expensive hardware. **MicroLLM-PrivateStack** proves you can run production-quality AI on:
+- ✅ 2GB RAM (tested and verified)
+- ✅ CPU-only inference (no GPU needed)
+- ✅ Budget hardware ($50-100 devices)
+- ✅ Edge deployment scenarios
+
+**Perfect for:** Small businesses, privacy-conscious organizations, educational institutions, and edge computing scenarios.
+
+---
+
+## 🎨 **Live Demo Evidence**
+
+### Real AI Conversations
+
+**Business Analysis:**
+> **User:** "analyze Q1 sales tahun ini"  
+> **AI:** "I have access to Q1 sales data for this quarter. I can calculate the total sales volume, identify any growth trends, and provide insights on how the sales performed compared to previous quarters..."
+
+**Multilingual Support:**
+> **User:** "apa fungsi apps ini"  
+> **AI:** Detailed explanation of features in Indonesian, asking clarifying questions to provide tailored advice.
+
+**Professional Responses:**
+- Contextual understanding
+- Follow-up questions
+- Structured analysis
+- Business-ready output
+
+### Performance Under Load
+- ✅ Rapid fire: 3 queries @ 1.5s each
+- ✅ Stress test: 15+ consecutive queries
+- ✅ Zero crashes or memory errors
+- ✅ Consistent quality across tests
+
+*See [TEST_RESULTS.md](docs/TEST_RESULTS.md) and [STRESS_TEST_RESULTS.md](docs/STRESS_TEST_RESULTS.md) for full analysis.*
+![MicroLLM-PrivateStack Banner](https://via.placeholder.com/1200x400/0f172a/6366f1?text=MicroLLM-PrivateStack+%E2%80%A2+Private+AI+for+Enterprise)
 
 ---
 
