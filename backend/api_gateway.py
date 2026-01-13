@@ -1,53 +1,72 @@
+# -*- coding: utf-8 -*-
 """
 API Gateway - Main Flask application with LLM integration
+Enhanced logging and 2GB RAM optimization
 """
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from dotenv import load_dotenv
 import os
 import sys
 import logging
 from pathlib import Path
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
-
-# Import LLM engine  
-try:
-    from llm_engine import LLMEngine
-except ImportError:
-    # Fallback if running from different directory
-    sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-    from llm_engine import LLMEngine
-
-# Load environment variables
-load_dotenv()
-
-# Configure logging
+# Configure logging FIRST
 logging.basicConfig(
-    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO")),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("../logs/server.log"),
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger(__name__)
 
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
+# Import LLM engine
+from llm_engine import LLMEngine
+
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app, origins=os.getenv("CORS_ORIGINS", "*").split(","))
+CORS(app)
 
 # Configuration
-app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-secret-key")
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
 
-# Initialize LLM Engine
-logger.info("Initializing LLM engine...")
+# Initialize LLM Engine with ABSOLUTE path
+logger.info("=" * 70)
+logger.info("MicroLLM-PrivateStack API Gateway")
+logger.info("=" * 70)
+logger.info(f"Working directory: {os.getcwd()}")
+logger.info(f"Script location: {__file__}")
+
+# Use absolute path for model
+BASE_DIR = Path(__file__).parent.parent
+MODEL_PATH = BASE_DIR / "models" / "deepseek-r1-1.5b-q4.gguf"
+
+logger.info(f"Base directory: {BASE_DIR}")
+logger.info(f"Model path: {MODEL_PATH}")
+logger.info(f"Model exists: {MODEL_PATH.exists()}")
+
 llm_config = {
-    "MODEL_PATH": os.getenv("MODEL_PATH", "./models/deepseek-r1-1.5b-q4.gguf"),
-    "MODEL_CONTEXT_LENGTH": os.getenv("MODEL_CONTEXT_LENGTH", "2048"),
-    "MODEL_THREADS": os.getenv("MODEL_THREADS", "4"),
-    "MODEL_TEMPERATURE": os.getenv("MODEL_TEMPERATURE", "0.3"),
+    "MODEL_PATH": str(MODEL_PATH),  # Absolute path
+    "MODEL_CONTEXT_LENGTH": os.getenv("MODEL_CONTEXT_LENGTH", "512"),   # Optimized for 2GB
+    "MODEL_THREADS": os.getenv("MODEL_THREADS", "2"),  # Reduced for 2GB
+    "MODEL_BATCH": os.getenv("MODEL_BATCH", "256"),  # Reduced for 2GB
+    "MODEL_TEMPERATURE": os.getenv("MODEL_TEMPERATURE", "0.7"),
     "MODEL_TOP_P": os.getenv("MODEL_TOP_P", "0.9"),
 }
+
+logger.info("Initializing LLM engine with config:")
+for key, value in llm_config.items():
+    logger.info(f"  {key}: {value}")
+
 llm_engine = LLMEngine(llm_config)
+
+logger.info(f"LLM Engine initialized. Model loaded: {llm_engine.model_loaded}")
+logger.info("=" * 70)
 
 
 @app.route("/health", methods=["GET"])
@@ -58,7 +77,7 @@ def health_check():
     return jsonify({
         "status": "healthy",
         "service": "MicroLLM-PrivateStack",
-        "version": "1.0.0-sprint1",
+        "version": "1.0.1-optimized",
         "model": model_info
     }), 200
 
@@ -67,14 +86,7 @@ def health_check():
 def chat():
     """
     Chat endpoint - Real LLM inference
-    
-    Request body:
-        {
-            "message": "Your question here",
-            "max_tokens": 512,  // optional
-            "temperature": 0.3,  // optional
-            "stream": false      // optional
-        }
+    Optimized for 2GB RAM (max 256 tokens)
     """
     try:
         data = request.get_json()
@@ -85,11 +97,13 @@ def chat():
             }), 400
         
         message = data.get("message", "")
-        max_tokens = int(data.get("max_tokens", 512))
+        
+        # Validate and cap for 2GB RAM
+        max_tokens = min(int(data.get("max_tokens", 256)), 256)
         temperature = float(data.get("temperature", llm_config["MODEL_TEMPERATURE"]))
         stream = data.get("stream", False)
         
-        logger.info(f"Received chat request: {message[:100]}...")
+        logger.info(f"Chat request: '{message[:50]}...' (max_tokens={max_tokens})")
         
         # Generate response
         response = llm_engine.generate(
@@ -100,21 +114,21 @@ def chat():
         )
         
         if stream:
-            # TODO: Implement SSE streaming
             return jsonify({
-                "error": "Streaming not yet implemented in Sprint 1"
+                "error": "Streaming not yet implemented"
             }), 501
         
-        logger.info(f"Response generated successfully")
+        logger.info(f"Response generated: {len(response)} chars")
         
         return jsonify({
             "response": response,
             "status": "success",
-            "model_loaded": llm_engine.model_loaded
+            "model_loaded": llm_engine.model_loaded,
+            "tokens_generated": len(response.split())  # Approximate
         }), 200
         
     except Exception as e:
-        logger.error(f"Chat endpoint error: {e}", exc_info=True)
+        logger.exception(f"Chat endpoint error: {e}")
         return jsonify({
             "error": str(e),
             "status": "error"
@@ -123,8 +137,23 @@ def chat():
 
 @app.route("/api/model/info", methods=["GET"])
 def model_info():
-    """Get model information"""
+    """Get detailed model information"""
     return jsonify(llm_engine.get_model_info()), 200
+
+
+@app.route("/api/debug/reload", methods=["POST"])
+def debug_reload():
+    """Debug endpoint to reload model"""
+    global llm_engine
+    
+    logger.info("Manual model reload requested")
+    llm_engine = LLMEngine(llm_config)
+    
+    return jsonify({
+        "status": "reloaded",
+        "model_loaded": llm_engine.model_loaded,
+        "info": llm_engine.get_model_info()
+    }), 200
 
 
 if __name__ == "__main__":
@@ -132,11 +161,16 @@ if __name__ == "__main__":
     port = int(os.getenv("API_PORT", 8000))
     debug = os.getenv("DEBUG", "false").lower() == "true"
     
-    logger.info("=" * 70)
-    logger.info("MicroLLM-PrivateStack API Gateway")
-    logger.info("=" * 70)
-    logger.info(f"Listening on: http://{host}:{port}")
-    logger.info(f"Model loaded: {llm_engine.model_loaded}")
-    logger.info("=" * 70)
+    if debug:
+        logger.warning("⚠️ Running in DEBUG mode - not for production!")
     
-    app.run(host=host, port=port, debug=debug)
+    logger.info("=" * 70)
+    logger.info(f"Starting server on: http://{host}:{port}")
+    logger.info(f"Model status: {'LOADED ✅' if llm_engine.model_loaded else 'NOT LOADED ❌'}")
+    if not llm_engine.model_loaded:
+        logger.warning(f"Model load error: {llm_engine.load_error}")
+        logger.info("API will work in DEMO mode")
+    logger.info("=" * 70)
+    logger.info("Press CTRL+C to quit")
+    
+    app.run(host=host, port=port, debug=debug, use_reloader=False)
