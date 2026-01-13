@@ -4,7 +4,10 @@
 
 ### Enterprise-Grade Private LLM Infrastructure with OWASP Security
 
-*Privacy-First • 2GB RAM Optimized • Production-Ready • OWASP ASVS Level 2*
+*Privacy-First • 2GB RAM Optimized • Phase 2: Optimization • OWASP ASVS Level 2*
+
+[![Production Readiness](https://img.shields.io/badge/production_ready-60%25-yellow.svg)](docs/roadmap.md)
+[![Phase](https://img.shields.io/badge/phase-2%2F4_Optimization-blue.svg)](docs/roadmap.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -46,9 +49,12 @@
 
 - **Private LLM Inference** - Run DeepSeek-R1-1.5B (Q4 quantized) locally
 - **2GB RAM Optimized** - Aggressive optimization for resource-constrained environments
-- **RESTful API** - Flask-based API gateway with CORS support
-- **Real-time Chat** - Interactive UI with streaming support (roadmap)
-- **Document RAG** - Semantic search with ChromaDB (roadmap)
+- **JWT Authentication** - Secure user authentication with bcrypt password hashing
+- **Database Foundation** - SQLite with 7 tables (users, workspaces, chat history, sessions, audit logs)
+- **RESTful API** - Flask-based API gateway with protected endpoints
+- **LLM Output Formatter** - Clean responses without thinking tags
+- **Real-time Chat** - Interactive UI (auth integration in progress)
+- **Document RAG** - Semantic search with ChromaDB (Phase 3)
 
 ### 🛡️ Enterprise Security (OWASP ASVS Level 2)
 
@@ -92,9 +98,11 @@
 
 ```
 Frontend:  HTML5 + Vanilla JS (minimal dependencies)
-API:       Flask + Flask-CORS
+API:       Flask + Flask-CORS + JWT
 LLM:       llama-cpp-python (DeepSeek-R1-1.5B GGUF Q4)
-Database:  SQLite (ChromaDB for RAG - planned)
+Database:  SQLite (users, workspaces, chat history, sessions, audit logs)
+Auth:      JWT tokens + bcrypt password hashing
+Caching:   Redis (Phase 2 - planned)
 Security:  Custom OWASP ASVS validators + guardrails
 ```
 
@@ -169,14 +177,35 @@ curl -X POST http://localhost:8000/api/chat \
 # Expected: JSON response with LLM-generated content + security metadata
 ```
 
-### Frontend
+### Authentication Setup
 
-Open `frontend/index.html` in your browser or serve with:
+Create an admin account:
 
 ```bash
-cd frontend
-python -m http.server 3000
-# Open http://localhost:3000
+# Quick setup with default credentials
+python scripts/create_admin.py
+
+# Or create custom account
+python scripts/create_custom_admin.py
+# Follow prompts to set email and password
+```
+
+**Default credentials:**
+- Email: `admin@microllm.local`
+- Password: `Admin@123456` 
+
+⚠️ **Change password after first login!**
+
+### Frontend
+
+Serve the frontend properly to avoid CORS issues:
+
+```bash
+# Start frontend server
+python scripts/serve_frontend.py
+
+# Open browser to:
+# http://localhost:3000/login.html
 ```
 
 ---
@@ -311,30 +340,66 @@ pytest tests/security/test_red_team.py -v
 
 ## 🗺️ Roadmap
 
-### v1.1.0 - Security Hardened (Q1 2026) ✅ **IN PROGRESS**
-- [x] OWASP ASVS Level 2 validators
-- [x] Red team test suite (50+ scenarios)
-- [x] Comprehensive security documentation
-- [x] Production hardening checklist
-- [ ] README update with badges & visuals
-- [ ] Release v1.1.0
+### Current Status: **Phase 2 - Optimization (60% Ready)**
 
-### v1.2.0 - Feature Expansion (Q2 2026)
-- [ ] Document upload & RAG integration
-- [ ] Multi-model support (Qwen, Llama, Mistral)
-- [ ] Advanced monitoring (Prometheus/Grafana)
-- [ ] Rate limiting middleware
-- [ ] JWT authentication
+We're following a **4-phase roadmap** from foundation to enterprise scale:
 
-### v1.3.0 - Enterprise Polish (Q3 2026)
-- [ ] Fine-grained access control (FGA/ReBAC)
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Phase 1         Phase 2       Phase 3         Phase 4       │
+│  Foundation      Optimize      Production      Scale Up      │
+│  ✅ DONE         🔄 CURRENT    📋 PLANNED      🔮 FUTURE     │
+├──────────────────────────────────────────────────────────────┤
+│  Week 1-4        Week 5-8      Week 9-12       Month 4-12    │
+│  60% Ready       85% Ready     95% Ready       Enterprise    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+#### ✅ Phase 1: Foundation (COMPLETED)
+- [x] Database infrastructure (SQLite, 7 tables)
+- [x] JWT authentication system
+- [x] Security guardrails (OWASP ASVS Level 2)
+- [x] LLM output formatter
+- [x] Audit logging
+
+#### 🔄 Phase 2: Optimization (IN PROGRESS - Current Focus)
+**Goal:** 85% production ready by Week 8
+
+- [ ] **Backend Performance** (P0 - Critical)
+  - Deploy with Gunicorn (3x throughput)
+  - Implement Redis caching
+  - Enable HTTP/2
+  - Database optimization
+
+- [ ] **Frontend Integration** (P0)
+  - Wire corporate.html to auth
+  - Load real data from database
+  - Fix CORS/serving issues
+
+- [ ] **Feature Completion** (P1)
+  - Workspace management
+  - Document upload API
+  - AI assistants
+
+#### 📋 Phase 3: Production Readiness (PLANNED)
+**Goal:** 95% production ready by Week 12
+
+- [ ] HTTPS/SSL implementation
+- [ ] Rate limiting & DDoS protection
+- [ ] Docker containerization
+- [ ] CI/CD pipeline
+- [ ] Unit & integration tests (>80% coverage)
+- [ ] Monitoring & logging (Sentry)
+
+#### 🔮 Phase 4: Scale Up (FUTURE - After 1K users)
+**Investment:** $150-300K | **Timeline:** Month 4-12
+
+- [ ] Native mobile apps (React Native/Flutter)
+- [ ] On-device LLM (hybrid approach)
+- [ ] Multi-model support (Llama, GPT-4, Claude)
+- [ ] Team collaboration features
+- [ ] Advanced RAG with vector database
 - [ ] Kubernetes deployment
-- [ ] Multi-language support (10+ languages)
-- [ ] Third-party security audit
-- [ ] SOC 2 Type I certification
-
-### v2.0.0 - Scale & Performance (Q4 2026)
-- [ ] GPU acceleration (CUDA/ROCm)
 - [ ] 7B model support (4GB RAM)
 - [ ] Clustering & load balancing
 - [ ] Advanced analytics dashboard
