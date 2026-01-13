@@ -5,6 +5,7 @@ data/
 
 # Ignore credentials
 CREDENTIALS.txt
+MY_CREDENTIALS.txt
 .env
 *.env
 

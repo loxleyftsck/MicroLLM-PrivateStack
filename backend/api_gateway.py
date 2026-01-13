@@ -184,8 +184,6 @@ def chat():
                 "error": "Streaming not yet implemented"
             }), 501
         
-        logger.info(f"Response generated: {len(response)} chars")
-        
         # Security check: Output validation (PII, secrets, toxicity)
         if output_guardrail and SECURITY_AVAILABLE:
             validation_result = output_guardrail.validate_output(

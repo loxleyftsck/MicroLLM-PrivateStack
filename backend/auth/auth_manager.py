@@ -44,6 +44,7 @@ class AuthManager:
             logger.error(f"Password verification error: {e}")
             return False
     
+    
     def generate_token(self, user_id: str, email: str) -> str:
         """Generate JWT token"""
         payload = {
@@ -54,7 +55,7 @@ class AuthManager:
         }
         
         token = jwt.encode(payload, self.secret_key, algorithm='HS256')
-       return token
+        return token
     
     def verify_token(self, token: str) -> Optional[Dict]:
         """Verify JWT token and return payload"""
