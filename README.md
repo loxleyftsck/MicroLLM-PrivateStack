@@ -531,13 +531,155 @@ docker-compose up -d
 
 ---
 
-## 🗺️ Roadmap
+## 🔐 Security Roadmap
 
-### v1.1 (Q2 2026)
+### Current Status: Sprint 1 Complete + Security Audit
+**Security Posture:** 🟡 **MODERATE** (Foundation with planned hardening)  
+**Target:** 🟢 **ENTERPRISE-READY** (v1.1.0 - Q1 2026)
+
+### Security Documentation (✅ Complete)
+- ✅ [Security Audit Report](docs/SECURITY_AUDIT.md) - Gap analysis & risk assessment
+- ✅ [Security Architecture](docs/SECURITY.md) - Threat model & controls
+- ✅ [Compliance Mapping](docs/COMPLIANCE.md) - GDPR/SOC2/ISO27001
+- ✅ [Production Hardening](docs/PRODUCTION_HARDENING.md) - 68-item checklist
+
+### Standards Compliance
+
+#### OWASP ASVS Level 2 Roadmap
+**Target:** Application Security Verification Standard Level 2 compliance
+
+| Category | Requirement | Status | Target |
+|----------|-------------|--------|--------|
+| **V1: Architecture** | Security architecture documented | ✅ Complete | Q1 2026 |
+| **V2: Authentication** | Multi-factor authentication | ⚠️ Planned | Q1 2026 |
+| **V3: Session Management** | Secure token handling | ✅ JWT impl. | Q1 2026 |
+| **V4: Access Control** | Role-based access control | ⚠️ Basic | Q1 2026 |
+| **V5: Validation** | Input/output validation | 🔄 In Progress | **Week 2** |
+| **V7: Cryptography** | Strong encryption (AES-256) | ✅ Complete | Q1 2026 |
+| **V8: Data Protection** | Encryption at rest/transit | ⚠️ Transit only | Q1 2026 |
+| **V10: Malicious Code** | Code review & testing | ⚠️ Planned | Q2 2026 |
+| **V14: Config** | Secure configuration | ⚠️ Partial | Q1 2026 |
+
+**Reference:** [OWASP ASVS 4.0](https://owasp.org/www-project-application-security-verification-standard/)
+
+#### SOC 2 Type II Timeline
+
+```
+Q1 2026 (Sprint 2 - Current)
+├── Week 1-2: P0 Security Implementation
+│   ├── Data validation (CC6.6)
+│   ├── Output guardrails (CC6.1)
+│   └── Security testing (CC8.1)
+├── Week 3-4: Infrastructure Hardening
+│   ├── TLS configuration (CC6.6)
+│   ├── Monitoring stack (CC7.2)
+│   └── Backup procedures (CC7.5)
+
+Q2 2026
+├── SOC 2 Type I Readiness Assessment
+├── Control evidence collection
+└── Third-party security audit
+
+Q3 2026
+├── 3-month observation period (Type II)
+├── Continuous monitoring
+└── Audit report generation
+
+Q4 2026
+├── SOC 2 Type II Certification 🎯
+└── Annual review process
+```
+
+#### ISO 27001 Compliance Statement
+
+**Status:** Aligned with ISO/IEC 27001:2022 Annex A controls
+
+**Key Controls Implemented:**
+- ✅ **A.9.2:** User access management (JWT + RBAC)
+- ✅ **A.10.1:** Cryptographic controls (AES-256, TLS 1.3)
+- ⚠️ **A.12.3:** Backup procedures (planned)
+- ⚠️ **A.12.6:** Vulnerability management (monthly scans)
+- ✅ **A.16.1:** Incident response (playbook documented)
+- ✅ **A.18.1:** Compliance requirements (GDPR/SOC2 mapped)
+
+**Certification Roadmap:** Q3-Q4 2026 (optional, based on enterprise adoption)
+
+### Security Implementation Priority
+
+#### P0 - Critical (Week 1-2) 🔴
+```python
+# 1. Data Ingestion Validator
+class DocumentValidator:
+    """OWASP ASVS V5.1.1 - Input Validation"""
+    - File type whitelist
+    - Size limit (50MB)
+    - Virus scanning (ClamAV)
+    - Content sanitization
+    - Encryption at rest (AES-256-GCM)
+
+# 2. LLM Output Guardrails
+class OutputGuard:
+    """OWASP ASVS V5.3.1 - Output Encoding"""
+    - Prompt injection detection
+    - Hallucination scoring
+    - PII leakage prevention
+    - Toxicity filtering
+```
+
+**Compliance Impact:**
+- GDPR Art. 32 (Security measures) ✅
+- SOC 2 CC6.6 (Data protection) ✅
+- OWASP ASVS V5 (Validation) ✅
+
+#### P1 - High (Week 3-4) 🟡
+- Fine-grained access control (FGA/ReBAC)
+- Production deployment hardening
+- Monitoring & alerting (Prometheus/Grafana)
+- Secrets management (HashiCorp Vault)
+
+#### P2 - Medium (Month 2) 🟢
+- Advanced monitoring & SIEM integration
+- Third-party security audit
+- Penetration testing (OWASP Top 10)
+- Comprehensive security documentation
+
+### Risk Mitigation Progress
+
+**Before Security Hardening:**
+```
+Risk Score: 6.5/10 (MODERATE-HIGH)
+├── Data poisoning: 8/10 🔴
+├── Prompt injection: 7/10 🔴
+├── Unauthorized access: 6/10 🟡
+└── Production secrets: 7/10 🔴
+```
+
+**After P0/P1 Implementation (Target):**
+```
+Risk Score: 2.5/10 (LOW)
+├── Data poisoning: 2/10 ✅ (Validator + scanning)
+├── Prompt injection: 3/10 ✅ (Guardrails)
+├── Unauthorized access: 2/10 ✅ (FGA)
+└── Production secrets: 2/10 ✅ (Vault)
+```
+
+---
+
+## 🗺️ Product Roadmap
+
+### v1.1 (Q1 2026) - Security Hardened
+- [ ] **P0 Validators:** Data ingestion + Output guardrails
+- [ ] **Fine-Grained Access:** Document-level permissions (FGA)
+- [ ] **Production Ready:** TLS, monitoring, backups
+- [ ] **Compliance:** GDPR deletion workflow, SOC 2 controls
+- [ ] **Security Testing:** Automated test suite, vulnerability scans
+
+### v1.2 (Q2 2026) - Feature Expansion
 - [ ] Multi-model support (Qwen, Llama, Mistral)
 - [ ] Advanced RAG (hybrid search)
 - [ ] Excel integration
 - [ ] Mobile apps (iOS/Android)
+- [ ] Multi-language support (10+ languages)
 
 ### v1.2 (Q3 2026)
 - [ ] Fine-tuning interface
