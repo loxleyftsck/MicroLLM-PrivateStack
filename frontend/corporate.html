@@ -6,6 +6,7 @@
     <title>MicroLLM-PrivateStack | Corporate AI Workspace</title>
     <link rel="stylesheet" href="styles/corporate.css">
     <link rel="stylesheet" href="styles/compliance-cards.css">
+    <link rel="stylesheet" href="styles/features.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -17,8 +18,32 @@
         <nav class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <img src="../docs/images/logo_icon.png" alt="MicroLLM" class="logo-icon">
-                    <span class="logo-text">MicroLLM</span>
+                    <img src="../docs/images/logo_new.png" alt="MicroLLM" class="logo-icon">
+                    <div class="logo-text-container">
+                        <span class="logo-text">MicroLLM</span>
+                        <span class="logo-subtitle">PrivateStack</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Workspace Selector -->
+            <div class="workspace-selector">
+                <button class="current-workspace" id="workspaceBtn">
+                    <span class="workspace-icon">📁</span>
+                    <span class="workspace-name">Default Workspace</span>
+                    <span class="dropdown-icon">▼</span>
+                </button>
+                
+                <div class="workspace-dropdown" id="workspaceDropdown">
+                    <div class="workspace-list">
+                        <div class=" workspace-item active" data-workspace="default">
+                            <span class="workspace-icon">📁</span>
+                            <span>Default Workspace</span>
+                        </div>
+                    </div>
+                    <button class="create-workspace-btn" id="createWorkspaceBtn">
+                        + New Workspace
+                    </button>
                 </div>
             </div>
             
@@ -232,5 +257,6 @@
     </div>
     
     <script src="scripts/corporate.js"></script>
+    <script src="scripts/features.js"></script>
 </body>
 </html>
