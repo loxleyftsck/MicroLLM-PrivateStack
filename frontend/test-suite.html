@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MicroLLM Test Suite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #6366f1;
+            font-size: 2.5em;
+        }
+        
+        .test-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .test-card h2 {
+            color: #818cf8;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status.pending { background: #f59e0b; color: #000; }
+        .status.success { background: #10b981; color: #fff; }
+        .status.error { background: #ef4444; color: #fff; }
+        
+        button {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px 10px 0;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        pre {
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border-left: 4px solid #6366f1;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        
+        .result {
+            margin-top: 15px;
+        }
+        
+        .metric {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            padding: 5px 12px;
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .run-all {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .run-all button {
+            font-size: 18px;
+            padding: 15px 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 MicroLLM-PrivateStack Test Suite</h1>
+        
+        <div class="run-all">
+            <button onclick="runAllTests()" id="runAllBtn">▶️ Run All Tests</button>
+        </div>
+        
+        <div class="test-card">
+            <h2>
+                <span>1. Health Check</span>
+                <span class="status pending" id="status1">PENDING</span>
+            </h2>
+            <p>Verify API server is running and responsive</p>
+            <button onclick="testHealth()">Test Health</button>
+            <div class="result" id="result1"></div>
+        </div>
+        
+        <div class="test-card">
+            <h2>
+                <span>2. Model Info</span>
+                <span class="status pending" id="status2">PENDING</span>
+            </h2>
+            <p>Check if LLM model is loaded and get details</p>
+            <button onclick="testModelInfo()">Test Model Info</button>
+            <div class="result" id="result2"></div>
+        </div>
+        
+        <div class="test-card">
+            <h2>
+                <span>3. Simple Math Query</span>
+                <span class="status pending" id="status3">PENDING</span>
+            </h2>
+            <p>Test basic inference with simple question</p>
+            <button onclick="testSimpleChat()">Test Simple Chat</button>
+            <div class="result" id="result3"></div>
+        </div>
+        
+        <div class="test-card">
+            <h2>
+                <span>4. Business Analysis</span>
+                <span class="status pending" id="status4">PENDING</span>
+            </h2>
+            <p>Test complex business query</p>
+            <button onclick="testBusinessChat()">Test Business Query</button>
+            <div class="result" id="result4"></div>
+        </div>
+        
+        <div class="test-card">
+            <h2>
+                <span>5. Indonesian Language</span>
+                <span class="status pending" id="status5">PENDING</span>
+            </h2>
+            <p>Test multilingual support</p>
+            <button onclick="testIndonesianChat()">Test Bahasa Indonesia</button>
+            <div class="result" id="result5"></div>
+        </div>
+        
+        <div class="test-card">
+            <h2>
+                <span>6. Performance Test</span>
+                <span class="status pending" id="status6">PENDING</span>
+            </h2>
+            <p>Measure response time and token generation speed</p>
+            <button onclick="testPerformance()">Test Performance</button>
+            <div class="result" id="result6"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        
+        function setStatus(testNum, status, message = '') {
+            const statusEl = document.getElementById(`status${testNum}`);
+            statusEl.className = `status ${status}`;
+            statusEl.textContent = message || status.toUpperCase();
+        }
+        
+        function showResult(testNum, content) {
+            document.getElementById(`result${testNum}`).innerHTML = content;
+        }
+        
+        async function testHealth() {
+            setStatus(1, 'pending', 'TESTING...');
+            const startTime = Date.now();
+            
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                const duration = Date.now() - startTime;
+                
+                setStatus(1, 'success', '✓ PASS');
+                showResult(1, `
+                    <div class="metric">⏱️ ${duration}ms</div>
+                    <div class="metric">Status: ${data.status}</div>
+                    <div class="metric">Model Loaded: ${data.model.loaded ? '✅ YES' : '❌ NO'}</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `);
+            } catch (error) {
+                setStatus(1, 'error', '✗ FAIL');
+                showResult(1, `<pre style="color: #ef4444">${error.message}</pre>`);
+            }
+        }
+        
+        async function testModelInfo() {
+            setStatus(2, 'pending', 'TESTING...');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/model/info`);
+                const data = await response.json();
+                
+                const loaded = data.loaded;
+                setStatus(2, loaded ? 'success' : 'error', loaded ? '✓ LOADED' : '✗ NOT LOADED');
+                
+                showResult(2, `
+                    <div class="metric">Model Loaded: ${loaded ? '✅' : '❌'}</div>
+                    <div class="metric">Size: ${data.model_size_mb} MB</div>
+                    <div class="metric">Context: ${data.context_length} tokens</div>
+                    <div class="metric">Threads: ${data.threads}</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `);
+            } catch (error) {
+                setStatus(2, 'error', '✗ FAIL');
+                showResult(2, `<pre style="color: #ef4444">${error.message}</pre>`);
+            }
+        }
+        
+        async function testSimpleChat() {
+            setStatus(3, 'pending', 'TESTING...');
+            const startTime = Date.now();
+            
+            try {
+                const response = await fetch(`${API_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: "What is 2+2? Answer briefly.",
+                        max_tokens: 50
+                    })
+                });
+                
+                const data = await response.json();
+                const duration = Date.now() - startTime;
+                
+                setStatus(3, 'success', '✓ PASS');
+                showResult(3, `
+                    <div class="metric">⏱️ ${duration}ms</div>
+                    <div class="metric">Model: ${data.model_loaded ? '✅ Real LLM' : '❌ Demo'}</div>
+                    <div class="metric">Tokens: ~${data.tokens_generated}</div>
+                    <pre><strong>Response:</strong>\n${data.response}</pre>
+                `);
+            } catch (error) {
+                setStatus(3, 'error', '✗ FAIL');
+                showResult(3, `<pre style="color: #ef4444">${error.message}</pre>`);
+            }
+        }
+        
+        async function testBusinessChat() {
+            setStatus(4, 'pending', 'TESTING...');
+            const startTime = Date.now();
+            
+            try {
+                const response = await fetch(`${API_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: "List 3 key advantages of cloud computing for businesses.",
+                        max_tokens: 200
+                    })
+                });
+                
+                const data = await response.json();
+                const duration = Date.now() - startTime;
+                
+                setStatus(4, 'success', '✓ PASS');
+                showResult(4, `
+                    <div class="metric">⏱️ ${duration}ms</div>
+                    <div class="metric">Model: ${data.model_loaded ? '✅ Real LLM' : '❌ Demo'}</div>
+                    <div class="metric">Tokens: ~${data.tokens_generated}</div>
+                    <pre><strong>Response:</strong>\n${data.response}</pre>
+                `);
+            } catch (error) {
+                setStatus(4, 'error', '✗ FAIL');
+                showResult(4, `<pre style="color: #ef4444">${error.message}</pre>`);
+            }
+        }
+        
+        async function testIndonesianChat() {
+            setStatus(5, 'pending', 'TESTING...');
+            const startTime = Date.now();
+            
+            try {
+                const response = await fetch(`${API_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: "Jelaskan apa itu kecerdasan buatan dalam 2 kalimat.",
+                        max_tokens: 150
+                    })
+                });
+                
+                const data = await response.json();
+                const duration = Date.now() - startTime;
+                
+                setStatus(5, 'success', '✓ PASS');
+                showResult(5, `
+                    <div class="metric">⏱️ ${duration}ms</div>
+                    <div class="metric">Model: ${data.model_loaded ? '✅ Real LLM' : '❌ Demo'}</div>
+                    <div class="metric">Tokens: ~${data.tokens_generated}</div>
+                    <pre><strong>Respons:</strong>\n${data.response}</pre>
+                `);
+            } catch (error) {
+                setStatus(5, 'error', '✗ FAIL');
+                showResult(5, `<pre style="color: #ef4444">${error.message}</pre>`);
+            }
+        }
+        
+        async function testPerformance() {
+            setStatus(6, 'pending', 'TESTING...');
+            
+            try {
+                const tests = [];
+                for (let i = 0; i < 3; i++) {
+                    const start = Date.now();
+                    await fetch(`${API_URL}/api/chat`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: `Test ${i+1}: Quick response test`,
+                            max_tokens: 50
+                        })
+                    });
+                    tests.push(Date.now() - start);
+                }
+                
+                const avg = Math.round(tests.reduce((a,b) => a+b) / tests.length);
+                const min = Math.min(...tests);
+                const max = Math.max(...tests);
+                
+                setStatus(6, 'success', '✓ PASS');
+                showResult(6, `
+                    <div class="metric">Average: ${avg}ms</div>
+                    <div class="metric">Min: ${min}ms</div>
+                    <div class="metric">Max: ${max}ms</div>
+                    <pre>Performance Stats (3 requests):\n${tests.map((t,i) => `Request ${i+1}: ${t}ms`).join('\n')}</pre>
+                `);
+            } catch (error) {
+                setStatus(6, 'error', '✗ FAIL');
+                showResult(6, `<pre style="color: #ef4444">${error.message}</pre>`);
+            }
+        }
+        
+        async function runAllTests() {
+            const btn = document.getElementById('runAllBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Running All Tests...';
+            
+            await testHealth();
+            await new Promise(r => setTimeout(r, 1000));
+            
+            await testModelInfo();
+            await new Promise(r => setTimeout(r, 1000));
+            
+            await testSimpleChat();
+            await new Promise(r => setTimeout(r, 2000));
+            
+            await testBusinessChat();
+            await new Promise(r => setTimeout(r, 2000));
+            
+            await testIndonesianChat();
+            await new Promise(r => setTimeout(r, 2000));
+            
+            await testPerformance();
+            
+            btn.disabled = false;
+            btn.textContent = '✅ All Tests Complete!';
+            setTimeout(() => {
+                btn.textContent = '▶️ Run All Tests';
+            }, 3000);
+        }
+        
+        // Auto-run health check on load
+        window.addEventListener('load', () => {
+            setTimeout(testHealth, 500);
+        });
+    </script>
+</body>
+</html>
