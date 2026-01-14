@@ -13,11 +13,17 @@ MY_CREDENTIALS.txt
 logs/
 *.log
 
+# Model files (too large for GitHub - 1GB+)
+models/
+*.gguf
+*.bin
+*.safetensors
+
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.sopyd
 .Python
 
 # IDEs
