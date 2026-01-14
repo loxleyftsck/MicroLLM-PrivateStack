@@ -27,6 +27,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 # Import LLM engine
 from llm_engine import LLMEngine
+from llm_formatter import LLMOutputFormatter
+from cache import LLMCache
 
 # Import security modules
 try:
@@ -100,17 +102,33 @@ try:
     # Initialize database
     db = DatabaseManager(db_path='data/microllm.db')
     logger.info(f"✅ Database initialized: {db.get_stats()}")
-    
-    # Initialize auth manager
-    JWT_SECRET = app.config["JWT_SECRET_KEY"]
-    auth = AuthManager(secret_key=JWT_SECRET, db_manager=db)
-    logger.info("✅ Authentication system ready")
-    
 except Exception as e:
-    logger.error(f"❌ Database/Auth initialization failed: {e}")
-    logger.warning("⚠️ Running in LIMITED MODE without auth")
-    db = None
-    auth = None
+    logger.error(f"❌ Database initialization failed: {e}")
+    logger.warning("⚠️ Running in LIMITED MODE without database")
+
+# Initialize auth manager
+if db: # Only try to initialize auth if db is available
+    try:
+        JWT_SECRET = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
+        auth = AuthManager(secret_key=JWT_SECRET, db_manager=db)
+        logger.info("✅ Auth manager initialized")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize auth: {e}")
+        logger.warning("⚠️  Authentication will be unavailable!")
+else:
+    logger.warning("⚠️ Authentication will be unavailable due to database issues!")
+
+# Initialize Redis cache (Phase 2 optimization)
+try:
+    cache = LLMCache(
+        host=os.getenv('REDIS_HOST', 'localhost'),
+        port=int(os.getenv('REDIS_PORT', 6379)),
+        ttl=int(os.getenv('CACHE_TTL', 3600))  # 1 hour default
+    )
+    logger.info("✅ Redis cache initialized (if REDIS_ENABLED=true)")
+except Exception as e:
+    logger.warning(f"⚠️  Redis cache unavailable: {e}")
+    cache = None
 
 logger.info("=" * 70)
 
@@ -171,13 +189,34 @@ def chat():
                     }
                 }), 403
         
-        # Generate response
-        response = llm_engine.generate(
-            prompt=message,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            stream=stream
-        )
+        # Try to get from cache first (Phase 2 optimization)
+        cache_key_params = {
+            'max_tokens': max_tokens,
+            'temperature': temperature
+        }
+        
+        cached_response = None
+        if cache:
+            cached_response = cache.get(message, **cache_key_params)
+        
+        if cached_response:
+            # Cache HIT - return instantly!
+            logger.info(f"🎯 Cache HIT: '{message[:50]}...'")
+            response = cached_response
+        else:
+            # Cache MISS - generate new response
+            logger.info(f"💨 Cache MISS: Generating new response...")
+            response = llm_engine.generate(
+                prompt=message,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream=stream
+            )
+            
+            # Cache the response for future requests
+            if cache and not stream:
+                cache.set(message, response, **cache_key_params)
+                logger.info(f"💾 Response cached for: '{message[:50]}...'")
         
         if stream:
             return jsonify({
@@ -185,9 +224,9 @@ def chat():
             }), 501
         
         # ============================================
+        # ============================================
         # Format LLM Output (Clean & Structure)
         # ============================================
-        from llm_formatter import LLMOutputFormatter
         
         formatted_response = LLMOutputFormatter.format_response(response)
         logger.info(f"✅ Response formatted: {len(response)} → {len(formatted_response)} chars")
