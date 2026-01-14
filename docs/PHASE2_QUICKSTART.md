@@ -149,7 +149,7 @@ REDIS_PORT=6379             # Redis server port
 CACHE_TTL=3600              # Cache duration (seconds)
 
 # LLM
-MODEL_PATH=models/deepseek-r1-distill-qwen-1.5b.Q4_K_M.gguf
+MODEL_PATH=models/deepseek-r1-1.5b-q4.gguf
 ```
 
 ---
