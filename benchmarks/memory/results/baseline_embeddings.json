@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "n_embeddings": 5000,
+    "dimension": 768
+  },
+  "results": {
+    "similarity_search": {
+      "aos_mean_ms": 20.970419999988128,
+      "aos_p95_ms": 22.581200000036006,
+      "soa_mean_ms": 6.001436666648866,
+      "soa_p95_ms": 6.614084999978331,
+      "speedup_soa_vs_aos": 3.494233325251064,
+      "top_k": 10
+    },
+    "partial_dimension_access": {
+      "aos_mean_ms": 6.928039999994932,
+      "soa_mean_ms": 0.3112400000418347,
+      "speedup_soa_vs_aos": 22.25947821315934
+    },
+    "memory": {
+      "aos_memory_mb": 0.26702880859375,
+      "soa_memory_mb": 14.667510986328125,
+      "memory_overhead_pct": -98.17945383615084
+    }
+  }
+}

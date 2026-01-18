@@ -1,0 +1,53 @@
+{
+  "metadata": {
+    "size": 5000000,
+    "dtype": "<class 'numpy.float32'>",
+    "memory_mb": 19.073486328125
+  },
+  "results": {
+    "sequential_read": {
+      "mean_ms": 5.151040000005196,
+      "median_ms": 5.007400000067719,
+      "p95_ms": 6.2695999999618826,
+      "p99_ms": 7.2099370000569225,
+      "std_ms": 0.5999533441944525,
+      "min_ms": 4.445600000053673,
+      "max_ms": 7.841399999961141
+    },
+    "random_read": {
+      "mean_ms": 7.203895999996348,
+      "median_ms": 6.787600000052407,
+      "p95_ms": 10.291709999989958,
+      "p99_ms": 11.249316999908386,
+      "std_ms": 1.3059331846458382,
+      "accesses": 500000
+    },
+    "strided_read_stride8": {
+      "mean_ms": 0.964769999982309,
+      "median_ms": 0.9346000000505228,
+      "p95_ms": 1.2059099999760292,
+      "stride": 8,
+      "accesses": 625000
+    },
+    "strided_read_stride16": {
+      "mean_ms": 1.23207200001616,
+      "median_ms": 1.1822499999425418,
+      "p95_ms": 1.7210000001227854,
+      "stride": 16,
+      "accesses": 312500
+    },
+    "sequential_write": {
+      "mean_ms": 0.4202000000168482,
+      "p95_ms": 0.4961000001003413
+    },
+    "random_write": {
+      "mean_ms": 4.086984000005032,
+      "p95_ms": 4.651800000010552,
+      "writes": 500000
+    },
+    "speedup": {
+      "sequential_vs_random": 1.4,
+      "description": "Sequential is 1.40x faster than random"
+    }
+  }
+}

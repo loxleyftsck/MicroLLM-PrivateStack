@@ -1,0 +1,107 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-A}}Background and Motivation}{1}{subsection.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-B}}Problem Statement}{1}{subsection.1.2}\protected@file@percent }
+\citation{openai2024}
+\citation{anthropic2024}
+\citation{google2024}
+\citation{gerganov2023}
+\citation{kwon2023}
+\citation{nvidia2024}
+\citation{jacob2018}
+\citation{dettmers2023}
+\citation{frantar2023}
+\citation{gerganov2023}
+\citation{owasp2024}
+\citation{nist2023}
+\citation{iso2023}
+\citation{redis2024,scylladb2024}
+\citation{zilliz2023}
+\citation{nvidia2024triton}
+\citation{deepseek2025}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-C}}Research Contributions}{2}{subsection.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-D}}Scope and Limitations}{2}{subsection.1.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {II}Related Work}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Cloud-Based LLM Services}{2}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}On-Premise LLM Solutions}{2}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Model Quantization Techniques}{2}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-D}}Enterprise AI Security Frameworks}{2}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-E}}Semantic Caching for LLMs}{2}{subsection.2.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}Architecture}{2}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}System Overview}{2}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Model Selection: DeepSeek-R1-Distill-Qwen-1.5B}{2}{subsection.3.2}\protected@file@percent }
+\citation{sima2025}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces MicroLLM-PrivateStack System Architecture with defense-in-depth design including API Layer, Semantic Cache, Inference Engine, Post-Processing, and Audit Logging.}}{3}{figure.1}\protected@file@percent }
+\newlabel{fig:architecture}{{1}{3}{MicroLLM-PrivateStack System Architecture with defense-in-depth design including API Layer, Semantic Cache, Inference Engine, Post-Processing, and Audit Logging}{figure.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces DeepSeek 1.5B Model Specifications}}{3}{table.1}\protected@file@percent }
+\newlabel{tab:model_specs}{{I}{3}{DeepSeek 1.5B Model Specifications}{table.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-B}1}Quantization Strategy}{3}{subsubsection.3.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Security Layer: OWASP ASVS Level 2}{3}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-C}1}Authentication \& Session Management}{3}{subsubsection.3.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-C}2}Input Validation \& Sanitization}{3}{subsubsection.3.3.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {1}Input Sanitization Implementation}{3}{lstlisting.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-C}3}Communication Security}{3}{subsubsection.3.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Semantic Caching Engine}{3}{subsection.3.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Semantic Caching Workflow showing decision tree for cache hit/miss with latency of 18ms (hit) vs 280ms (miss).}}{3}{figure.2}\protected@file@percent }
+\newlabel{fig:caching}{{2}{3}{Semantic Caching Workflow showing decision tree for cache hit/miss with latency of 18ms (hit) vs 280ms (miss)}{figure.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Semantic Caching Performance}}{4}{table.2}\protected@file@percent }
+\newlabel{tab:cache_performance}{{II}{4}{Semantic Caching Performance}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-E}}Post-Processing \& Risk Scoring}{4}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-F}}Audit \& Logging System}{4}{subsection.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Implementation}{4}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Containerization with Docker}{4}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Kubernetes Deployment}{4}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}API Design}{4}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Monitoring \& Observability}{4}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Memory Access Optimization}{4}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-E}1}SoA vs AoS for Embedding Storage}{4}{subsubsection.4.5.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces SoA vs AoS Embedding Storage Performance}}{4}{table.3}\protected@file@percent }
+\newlabel{tab:soa_benchmark}{{III}{4}{SoA vs AoS Embedding Storage Performance}{table.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Evaluation}{4}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Performance Metrics}{4}{subsection.5.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces Time to First Token (TTFT) Measurements}}{4}{table.4}\protected@file@percent }
+\newlabel{tab:latency}{{IV}{4}{Time to First Token (TTFT) Measurements}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Resource Utilization}{4}{subsection.5.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Performance Metrics Comparison showing significant improvements with semantic caching: 15.5x latency reduction, 3.75x throughput increase, and 74\% power reduction.}}{5}{figure.3}\protected@file@percent }
+\newlabel{fig:performance}{{3}{5}{Performance Metrics Comparison showing significant improvements with semantic caching: 15.5x latency reduction, 3.75x throughput increase, and 74\% power reduction}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Total Cost of Ownership Analysis}{5}{subsection.5.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces 3-Year TCO Comparison}}{5}{table.5}\protected@file@percent }
+\newlabel{tab:tco}{{V}{5}{3-Year TCO Comparison}{table.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}Security Compliance Verification}{5}{subsection.5.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces 3-Year TCO Comparison showing on-premise deployment (\$88.5K) provides 24\% savings vs cloud without cache (\$117K), though cloud with cache (\$31.3K) is most economical for moderate workloads.}}{5}{figure.4}\protected@file@percent }
+\newlabel{fig:tco}{{4}{5}{3-Year TCO Comparison showing on-premise deployment (\$88.5K) provides 24\% savings vs cloud without cache (\$117K), though cloud with cache (\$31.3K) is most economical for moderate workloads}{figure.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Use Cases \& Enterprise Applications}{5}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Financial Services}{5}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Healthcare}{5}{subsection.6.2}\protected@file@percent }
+\bibstyle{IEEEtran}
+\bibdata{references}
+\bibcite{openai2024}{1}
+\bibcite{anthropic2024}{2}
+\bibcite{google2024}{3}
+\bibcite{gerganov2023}{4}
+\bibcite{kwon2023}{5}
+\bibcite{nvidia2024}{6}
+\bibcite{jacob2018}{7}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Manufacturing}{6}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Legal \& Compliance}{6}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Discussion}{6}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-A}}Trade-offs: On-Premise vs Cloud}{6}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-B}}Limitations}{6}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-C}}Future Work}{6}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}Conclusion}{6}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{6}{section*.1}\protected@file@percent }
+\bibcite{dettmers2023}{8}
+\bibcite{frantar2023}{9}
+\bibcite{owasp2024}{10}
+\bibcite{nist2023}{11}
+\bibcite{iso2023}{12}
+\bibcite{redis2024}{13}
+\bibcite{scylladb2024}{14}
+\bibcite{zilliz2023}{15}
+\bibcite{nvidia2024triton}{16}
+\bibcite{deepseek2025}{17}
+\bibcite{sima2025}{18}
+\gdef \@abspage@last{7}
