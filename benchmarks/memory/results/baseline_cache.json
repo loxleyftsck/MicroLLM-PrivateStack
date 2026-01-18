@@ -1,0 +1,207 @@
+{
+  "cache_levels": [
+    {
+      "size_kb": 4,
+      "size_mb": 0.00390625,
+      "elements": 1024,
+      "mean_time_ns": 1167.0000003505265,
+      "time_per_element_ns": 1.139648437842311,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 8,
+      "size_mb": 0.0078125,
+      "elements": 2048,
+      "mean_time_ns": 2219.999992121302,
+      "time_per_element_ns": 1.0839843711529795,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 16,
+      "size_mb": 0.015625,
+      "elements": 4096,
+      "mean_time_ns": 2774.000024601264,
+      "time_per_element_ns": 0.677246099756168,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 32,
+      "size_mb": 0.03125,
+      "elements": 8192,
+      "mean_time_ns": 2206.0000219426,
+      "time_per_element_ns": 0.26928711205354006,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 64,
+      "size_mb": 0.0625,
+      "elements": 16384,
+      "mean_time_ns": 3411.0000001419394,
+      "time_per_element_ns": 0.2081909179774133,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 128,
+      "size_mb": 0.125,
+      "elements": 32768,
+      "mean_time_ns": 7819.0000203903755,
+      "time_per_element_ns": 0.23861694398163988,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 256,
+      "size_mb": 0.25,
+      "elements": 65536,
+      "mean_time_ns": 11945.999976887833,
+      "time_per_element_ns": 0.18228149378796132,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 512,
+      "size_mb": 0.5,
+      "elements": 131072,
+      "mean_time_ns": 21316.999998362007,
+      "time_per_element_ns": 0.16263580321015936,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 1024,
+      "size_mb": 1.0,
+      "elements": 262144,
+      "mean_time_ns": 49016.99998981712,
+      "time_per_element_ns": 0.18698501583029603,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 2048,
+      "size_mb": 2.0,
+      "elements": 524288,
+      "mean_time_ns": 119999.99999943611,
+      "time_per_element_ns": 0.22888183593642447,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 4096,
+      "size_mb": 4.0,
+      "elements": 1048576,
+      "mean_time_ns": 369567.0000070095,
+      "time_per_element_ns": 0.35244655609799336,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 8192,
+      "size_mb": 8.0,
+      "elements": 2097152,
+      "mean_time_ns": 1157707.0000043933,
+      "time_per_element_ns": 0.5520377159139601,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 16384,
+      "size_mb": 16.0,
+      "elements": 4194304,
+      "mean_time_ns": 3946329.000007154,
+      "time_per_element_ns": 0.9408781528489957,
+      "estimated_cache": "L1 cache"
+    },
+    {
+      "size_kb": 32768,
+      "size_mb": 32.0,
+      "elements": 8388608,
+      "mean_time_ns": 8468107.000001056,
+      "time_per_element_ns": 1.0094770193101235,
+      "estimated_cache": "L1 cache"
+    }
+  ],
+  "stride_effects": [
+    {
+      "stride": 1,
+      "stride_bytes": 4,
+      "mean_time_ms": 2.4623580000070433,
+      "accesses": 2097152,
+      "slowdown_vs_stride1": 1.0,
+      "estimated_cache_line_utilization": 100.0
+    },
+    {
+      "stride": 2,
+      "stride_bytes": 8,
+      "mean_time_ms": 0.9207520000154545,
+      "accesses": 1048576,
+      "slowdown_vs_stride1": 0.3739310043514472,
+      "estimated_cache_line_utilization": 100.0
+    },
+    {
+      "stride": 4,
+      "stride_bytes": 16,
+      "mean_time_ms": 0.42885199999545875,
+      "accesses": 524288,
+      "slowdown_vs_stride1": 0.1741631395573804,
+      "estimated_cache_line_utilization": 100.0
+    },
+    {
+      "stride": 8,
+      "stride_bytes": 32,
+      "mean_time_ms": 0.3496200000245153,
+      "accesses": 262144,
+      "slowdown_vs_stride1": 0.14198585259475482,
+      "estimated_cache_line_utilization": 100.0
+    },
+    {
+      "stride": 16,
+      "stride_bytes": 64,
+      "mean_time_ms": 0.21874400002616312,
+      "accesses": 131072,
+      "slowdown_vs_stride1": 0.08883517344981413,
+      "estimated_cache_line_utilization": 100.0
+    },
+    {
+      "stride": 32,
+      "stride_bytes": 128,
+      "mean_time_ms": 0.08183000000371976,
+      "accesses": 65536,
+      "slowdown_vs_stride1": 0.0332323731981644,
+      "estimated_cache_line_utilization": 50.0
+    },
+    {
+      "stride": 64,
+      "stride_bytes": 256,
+      "mean_time_ms": 0.04505799999606097,
+      "accesses": 32768,
+      "slowdown_vs_stride1": 0.01829872016820141,
+      "estimated_cache_line_utilization": 25.0
+    }
+  ],
+  "spatial_locality": [
+    {
+      "window_size": 1,
+      "local_access_ms": 0.20539999991342484,
+      "random_access_ms": 0.15110000003915047,
+      "locality_benefit_pct": -35.93646582409336
+    },
+    {
+      "window_size": 10,
+      "local_access_ms": 0.20289999997658015,
+      "random_access_ms": 0.43430000005173497,
+      "locality_benefit_pct": 53.28114207865296
+    },
+    {
+      "window_size": 100,
+      "local_access_ms": 0.34199999981865403,
+      "random_access_ms": 0.22779999994781974,
+      "locality_benefit_pct": -50.13169442361419
+    },
+    {
+      "window_size": 1000,
+      "local_access_ms": 0.26000000002568413,
+      "random_access_ms": 0.14770000007047202,
+      "locality_benefit_pct": -76.03249824077893
+    }
+  ],
+  "bandwidth": {
+    "test_size_mb": 100,
+    "sequential_read_bandwidth_gbps": 3.3130913523465404,
+    "sequential_write_bandwidth_gbps": 30.94265281854474,
+    "read_time_ms": 29.475870000032955,
+    "write_time_ms": 3.156039999953464
+  }
+}
