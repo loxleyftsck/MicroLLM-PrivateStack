@@ -5,7 +5,7 @@ Cleans and formats LLM responses for better readability
 """
 
 import re
-from typing import str
+from typing import List, Optional
 
 class LLMOutputFormatter:
     """

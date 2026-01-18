@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MicroLLM Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f2e;
+            --bg-card: #1e2433;
+            --accent: #00d4ff;
+            --accent-green: #00ff88;
+            --accent-orange: #ff9500;
+            --accent-red: #ff4757;
+            --text-primary: #ffffff;
+            --text-secondary: #8899a6;
+            --border: #2d3748;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: var(--bg-secondary);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .header h1 {
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-online {
+            background: rgba(0, 255, 136, 0.15);
+            color: var(--accent-green);
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .dashboard {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+        
+        .metric-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+        
+        .metric-card h3 {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .metric-value.green { color: var(--accent-green); }
+        .metric-value.orange { color: var(--accent-orange); }
+        .metric-value.red { color: var(--accent-red); }
+        
+        .metric-sub {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+        
+        .chart-card {
+            grid-column: span 2;
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+        
+        .chart-card h3 {
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+        
+        .chart-container {
+            height: 200px;
+        }
+        
+        .full-width {
+            grid-column: span 4;
+        }
+        
+        .logs-container {
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .log-entry {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 15px;
+        }
+        
+        .log-time {
+            color: var(--text-secondary);
+            min-width: 80px;
+        }
+        
+        .log-type {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .log-type.info { background: rgba(0, 212, 255, 0.2); color: var(--accent); }
+        .log-type.success { background: rgba(0, 255, 136, 0.2); color: var(--accent-green); }
+        .log-type.warning { background: rgba(255, 149, 0, 0.2); color: var(--accent-orange); }
+        .log-type.error { background: rgba(255, 71, 87, 0.2); color: var(--accent-red); }
+        
+        .progress-ring {
+            width: 100px;
+            height: 100px;
+        }
+        
+        .rag-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .rag-stat {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 212, 255, 0.05);
+            border-radius: 8px;
+        }
+        
+        .rag-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .rag-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+        
+        .refresh-btn {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .refresh-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .cache-visual {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .cache-bar {
+            flex: 1;
+            height: 30px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .cache-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-green));
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <span>🖥️</span>
+            MicroLLM Admin Dashboard
+        </h1>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <span class="status-badge status-online">
+                <span class="status-dot"></span>
+                System Online
+            </span>
+            <button class="refresh-btn" onclick="refreshAll()">
+                🔄 Refresh
+            </button>
+        </div>
+    </div>
+    
+    <div class="dashboard">
+        <!-- Key Metrics -->
+        <div class="metric-card">
+            <h3>⏱️ Avg Response Time</h3>
+            <div class="metric-value" id="avgResponseTime">2.1s</div>
+            <div class="metric-sub">Last 10 requests</div>
+        </div>
+        
+        <div class="metric-card">
+            <h3>📊 Cache Hit Rate</h3>
+            <div class="metric-value green" id="cacheHitRate">45%</div>
+            <div class="metric-sub">Semantic cache</div>
+        </div>
+        
+        <div class="metric-card">
+            <h3>💾 RAM Usage</h3>
+            <div class="metric-value orange" id="ramUsage">56%</div>
+            <div class="metric-sub" id="ramDetails">4.5 / 8.0 GB</div>
+        </div>
+        
+        <div class="metric-card">
+            <h3>📈 Total Requests</h3>
+            <div class="metric-value" id="totalRequests">127</div>
+            <div class="metric-sub">Since startup</div>
+        </div>
+        
+        <!-- Response Time Chart -->
+        <div class="chart-card">
+            <h3>📈 Response Time Trend</h3>
+            <div class="chart-container">
+                <canvas id="responseTimeChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Cache Stats -->
+        <div class="chart-card">
+            <h3>🧠 Semantic Cache Status</h3>
+            <div class="rag-stats">
+                <div class="rag-stat">
+                    <div class="rag-stat-value" id="cacheEntries">128</div>
+                    <div class="rag-stat-label">Cached Entries</div>
+                </div>
+                <div class="rag-stat">
+                    <div class="rag-stat-value" id="cacheHits">57</div>
+                    <div class="rag-stat-label">Cache Hits</div>
+                </div>
+                <div class="rag-stat">
+                    <div class="rag-stat-value" id="cacheMisses">70</div>
+                    <div class="rag-stat-label">Cache Misses</div>
+                </div>
+            </div>
+            <div class="cache-visual">
+                <span style="font-size: 0.8rem; color: var(--text-secondary);">Capacity:</span>
+                <div class="cache-bar">
+                    <div class="cache-fill" id="cacheFill" style="width: 1.28%"></div>
+                </div>
+                <span style="font-size: 0.8rem; color: var(--text-secondary);" id="cachePercent">1.28%</span>
+            </div>
+        </div>
+        
+        <!-- RAG Knowledge Base -->
+        <div class="chart-card">
+            <h3>📚 RAG Knowledge Base</h3>
+            <div class="rag-stats">
+                <div class="rag-stat">
+                    <div class="rag-stat-value" id="ragDocs">37</div>
+                    <div class="rag-stat-label">Documents</div>
+                </div>
+                <div class="rag-stat">
+                    <div class="rag-stat-value" id="ragChunks">450</div>
+                    <div class="rag-stat-label">Text Chunks</div>
+                </div>
+                <div class="rag-stat">
+                    <div class="rag-stat-value" id="ragSize">2.8 MB</div>
+                    <div class="rag-stat-label">Vector Size</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Security Status -->
+        <div class="chart-card">
+            <h3>🔒 Security Status</h3>
+            <div class="rag-stats">
+                <div class="rag-stat">
+                    <div class="rag-stat-value green">Active</div>
+                    <div class="rag-stat-label">Guardrails</div>
+                </div>
+                <div class="rag-stat">
+                    <div class="rag-stat-value" id="blockedRequests">3</div>
+                    <div class="rag-stat-label">Blocked</div>
+                </div>
+                <div class="rag-stat">
+                    <div class="rag-stat-value green">0</div>
+                    <div class="rag-stat-label">PII Detected</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Live Logs -->
+        <div class="chart-card full-width">
+            <h3>📝 Live Request Log</h3>
+            <div class="logs-container" id="logsContainer">
+                <div class="log-entry">
+                    <span class="log-time">15:15:23</span>
+                    <span class="log-type success">200</span>
+                    <span>POST /api/chat - "What is AI?" - 2.14s</span>
+                </div>
+                <div class="log-entry">
+                    <span class="log-time">15:14:58</span>
+                    <span class="log-type success">200</span>
+                    <span>POST /api/chat - "Explain machine learning" - 3.21s</span>
+                </div>
+                <div class="log-entry">
+                    <span class="log-time">15:14:32</span>
+                    <span class="log-type info">201</span>
+                    <span>POST /api/documents/upload - paper.pdf (60 chunks)</span>
+                </div>
+                <div class="log-entry">
+                    <span class="log-time">15:13:45</span>
+                    <span class="log-type warning">403</span>
+                    <span>POST /api/chat - Blocked: Prompt injection detected</span>
+                </div>
+                <div class="log-entry">
+                    <span class="log-time">15:12:11</span>
+                    <span class="log-type success">200</span>
+                    <span>POST /api/auth/login - user@company.com</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Response Time Chart
+        const ctx = document.getElementById('responseTimeChart').getContext('2d');
+        const responseTimeChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['15:10', '15:11', '15:12', '15:13', '15:14', '15:15', '15:16', '15:17', '15:18'],
+                datasets: [{
+                    label: 'Response Time (s)',
+                    data: [3.2, 2.8, 2.1, 4.1, 2.2, 2.1, 2.3, 2.0, 2.1],
+                    borderColor: '#00d4ff',
+                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#00d4ff',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#8899a6' },
+                        grid: { color: '#2d3748' }
+                    },
+                    x: {
+                        ticks: { color: '#8899a6' },
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+        
+        // Auto-refresh every 5 seconds
+        async function refreshAll() {
+            try {
+                // Fetch health data
+                const healthResp = await fetch('/api/health');
+                if (healthResp.ok) {
+                    const health = await healthResp.json();
+                    
+                    // Update cache stats
+                    if (health.model && health.model.cache) {
+                        document.getElementById('cacheEntries').textContent = health.model.cache.current_entries || 0;
+                        document.getElementById('cacheHitRate').textContent = (health.model.cache.hit_rate_pct || 0).toFixed(1) + '%';
+                        
+                        const capacity = (health.model.cache.current_entries / 10000 * 100).toFixed(2);
+                        document.getElementById('cacheFill').style.width = capacity + '%';
+                        document.getElementById('cachePercent').textContent = capacity + '%';
+                    }
+                }
+                
+                // Fetch system metrics
+                const metricsResp = await fetch('/api/metrics/system');
+                if (metricsResp.ok) {
+                    const metrics = await metricsResp.json();
+                    document.getElementById('ramUsage').textContent = metrics.ram_percent.toFixed(0) + '%';
+                    document.getElementById('ramDetails').textContent = 
+                        `${metrics.ram_used_gb.toFixed(1)} / ${metrics.ram_total_gb.toFixed(1)} GB`;
+                }
+                
+                console.log('Dashboard refreshed');
+            } catch (e) {
+                console.error('Refresh failed:', e);
+            }
+        }
+        
+        // Initial load
+        refreshAll();
+        
+        // Auto-refresh
+        setInterval(refreshAll, 5000);
+    </script>
+</body>
+</html>

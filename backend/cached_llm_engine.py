@@ -8,12 +8,17 @@ Project: MicroLLM-PrivateStack
 
 import logging
 import time
-from typing import Optional, Dict, Any, Union, Generator
+from typing import Optional, Dict, Any, Union, Generator, List
 
-from .llm_engine import LLMEngine
-from .semantic_cache_soa import SemanticCacheSOA, create_semantic_cache
-
-logger = logging.getLogger(__name__)
+try:
+    from .llm_engine import LLMEngine
+    from .semantic_cache_soa import SemanticCacheSOA, create_semantic_cache
+    logger = logging.getLogger(__name__)
+except ImportError:
+    # Support running as top-level script or from api_gateway
+    from llm_engine import LLMEngine
+    from semantic_cache_soa import SemanticCacheSOA, create_semantic_cache
+    logger = logging.getLogger("cached_llm_engine")
 
 
 class CachedLLMEngine:
@@ -33,7 +38,8 @@ class CachedLLMEngine:
         cache_dimension: int = 768,
         cache_max_entries: int = 10000,
         similarity_threshold: float = 0.95,
-        embedding_fn=None
+        embedding_fn=None,
+        redis_client=None
     ):
         """
         Initialize cached LLM engine.
@@ -44,6 +50,7 @@ class CachedLLMEngine:
             cache_max_entries: Maximum cache entries
             similarity_threshold: Cosine similarity threshold for cache hit
             embedding_fn: Function to generate embeddings (None = hash-based fallback)
+            redis_client: Optional Redis client for persistence
         """
         # Initialize LLM engine
         self.llm = LLMEngine(config)
@@ -54,6 +61,7 @@ class CachedLLMEngine:
             max_entries=cache_max_entries,
             similarity_threshold=similarity_threshold,
             embedding_fn=embedding_fn,
+            redis_client=redis_client,
             use_soa=True  # Use optimized SoA layout
         )
         
@@ -72,6 +80,15 @@ class CachedLLMEngine:
         logger.info(f"  Similarity threshold: {similarity_threshold}")
         logger.info("=" * 70)
     
+    @property
+    def model_loaded(self) -> bool:
+        """Delegate model_loaded check to underlying LLM engine"""
+        return self.llm.model_loaded
+
+    def create_embedding(self, text: str) -> List[float]:
+        """Delegate embedding generation to underlying LLM engine"""
+        return self.llm.create_embedding(text)
+
     def generate(
         self,
         prompt: str,

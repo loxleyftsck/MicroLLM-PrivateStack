@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Loading MicroLLM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        .splash-container {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border-radius: 20px;
+            padding: 50px;
+            text-align: center;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #00d4ff, #3a7bd5);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            color: #8899a6;
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+        
+        .loader-container {
+            margin: 20px 0;
+        }
+        
+        .loader {
+            width: 200px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+        
+        .loader-bar {
+            width: 30%;
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #3a7bd5);
+            border-radius: 2px;
+            animation: loading 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400%); }
+        }
+        
+        .status {
+            color: #00d4ff;
+            font-size: 0.85rem;
+            margin-top: 15px;
+        }
+        
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #00d4ff;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .footer {
+            margin-top: 25px;
+            font-size: 0.75rem;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="splash-container">
+        <div class="logo">🤖</div>
+        <h1>MicroLLM PrivateStack</h1>
+        <p class="subtitle">On-Premise AI Assistant</p>
+        
+        <div class="loader-container">
+            <div class="loader">
+                <div class="loader-bar"></div>
+            </div>
+        </div>
+        
+        <div class="status">
+            <span class="status-dot"></span>
+            Loading AI Model...
+        </div>
+        
+        <p class="footer">This may take up to 60 seconds on first launch</p>
+    </div>
+    
+    <script>
+        const messages = [
+            'Loading AI Model...',
+            'Initializing LLM Engine...',
+            'Setting up Security...',
+            'Preparing Interface...',
+            'Almost ready...'
+        ];
+        
+        let index = 0;
+        const statusEl = document.querySelector('.status');
+        
+        setInterval(() => {
+            index = (index + 1) % messages.length;
+            statusEl.innerHTML = `<span class="status-dot"></span>${messages[index]}`;
+        }, 3000);
+    </script>
+</body>
+</html>

@@ -7,7 +7,7 @@ Enhanced logging and error handling
 import os
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any, Generator, Union
+from typing import Optional, Dict, Any, Generator, Union, List
 
 try:
     from llama_cpp import Llama
@@ -91,22 +91,23 @@ class LLMEngine:
                 use_mlock=False,  # Don't lock memory (safer for low RAM)
                 use_mmap=True,   # Use memory mapping (more efficient)
                 low_vram=True,   # Low VRAM mode
+                embedding=True,  # Enable embedding generation
             )
             
             self.model_loaded = True
-            logger.info("✅ Model loaded successfully!")
+            logger.info("Model loaded successfully!")
             logger.info(f"Model type: {type(self.model)}")
             
         except MemoryError as e:
             self.load_error = f"Out of memory: {str(e)}"
-            logger.error(f"❌ MEMORY ERROR: {self.load_error}")
+            logger.error(f"MEMORY ERROR: {self.load_error}")
             logger.error("💡 This machine may not have enough RAM for this model.")
             logger.error("   Try: 1) Smaller model (Q2_K), 2) Lower n_ctx, 3) Close other apps")
             self.model_loaded = False
             
         except Exception as e:
             self.load_error = f"Failed to load model: {str(e)}"
-            logger.exception(f"❌ MODEL LOAD ERROR: {self.load_error}")
+            logger.exception(f"MODEL LOAD ERROR: {self.load_error}")
             logger.error(f"Error type: {type(e).__name__}")
             self.model_loaded = False
     
@@ -201,6 +202,18 @@ Currently running in DEMO mode."""
         else:
             return mock_text
     
+    def create_embedding(self, text: str) -> List[float]:
+        """Generate embedding for text"""
+        if not self.model_loaded:
+            # Fallback: simple random or hash-based embedding for testing
+            import hashlib
+            import numpy as np
+            hash_bytes = hashlib.sha256(text.encode()).digest()
+            np.random.seed(int.from_bytes(hash_bytes[:4], 'big'))
+            return np.random.randn(768).tolist()
+            
+        return self.model.create_embedding(text)['data'][0]['embedding']
+
     def get_model_info(self) -> Dict[str, Any]:
         """Get detailed information about loaded model"""
         model_path = Path(self.config.get("MODEL_PATH", "Not set")).resolve()

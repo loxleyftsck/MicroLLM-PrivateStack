@@ -28,16 +28,17 @@ class LLMCache:
         
         if self.enabled:
             try:
+                # Set decode_responses=False to support binary data (embeddings)
                 self.redis_client = redis.Redis(
                     host=host,
                     port=port,
                     db=db,
-                    decode_responses=True,
+                    decode_responses=False,
                     socket_connect_timeout=2
                 )
                 # Test connection
                 self.redis_client.ping()
-                print(f"✅ Redis cache connected: {host}:{port}")
+                print(f"✅ Redis cache connected: {host}:{port} (Binary Mode)")
             except Exception as e:
                 print(f"⚠️  Redis cache disabled: {e}")
                 self.enabled = False
@@ -70,7 +71,7 @@ class LLMCache:
             
             if cached:
                 print(f"🎯 Cache HIT: {prompt[:50]}...")
-                return json.loads(cached)
+                return json.loads(cached.decode('utf-8'))
             
             return None
         except Exception as e:
@@ -128,7 +129,8 @@ class LLMCache:
         
         try:
             info = self.redis_client.info()
-            keys_count = len(self.redis_client.keys('llm:*'))
+            # keys() returns bytes in binary mode
+            keys_count = len(self.redis_client.keys(b'llm:*'))
             
             return {
                 'enabled': True,

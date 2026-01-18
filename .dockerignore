@@ -1,0 +1,58 @@
+# Docker ignore file
+# Exclude unnecessary files from the Docker build context
+
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+tests/
+*.test.py
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Development
+*.log
+*.tmp
+.env.local
+.env.development
+
+# Documentation (optional - can include if needed)
+# docs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large files that should be mounted as volumes
+# models/  # Uncomment if you want to mount models separately
+
+# Nginx SSL certs (mounted separately)
+nginx/ssl/
+
+# Local data
+data/
+logs/
+
+# Scripts
+*.ps1
+*.bat
+*.sh
