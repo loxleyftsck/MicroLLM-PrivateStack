@@ -1,0 +1,220 @@
+/* ========================================
+   UI/UX POLISH & MICRO-INTERACTIONS
+   Enhanced Feedback and Smooth Transitions
+   ======================================== */
+
+/* === SMOOTH PAGE TRANSITIONS === */
+.page-enter {
+  opacity: 0;
+  transform: scale(0.98) translateY(10px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition:
+    opacity 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* === OPTIMIZED HOVER EFFECTS === */
+.hover-lift {
+  transition:
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.hover-glow {
+  transition: filter 200ms ease;
+}
+
+.hover-glow:hover {
+  filter: drop-shadow(0 0 8px var(--color-ai-blue, #00d4ff));
+}
+
+/* === BUTTON FEEDBACK === */
+.btn-press {
+  position: relative;
+  overflow: hidden;
+  transition:
+    background 200ms,
+    transform 100ms;
+}
+
+.btn-press:active {
+  transform: scale(0.96);
+}
+
+.btn-press::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.3);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%);
+  transform-origin: 50% 50%;
+}
+
+.btn-press:focus:not(:active)::after {
+  animation: ripple 600ms ease-out;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  20% {
+    transform: scale(25, 25);
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(40, 40);
+  }
+}
+
+/* === MICRO-INTERACTIONS === */
+.shake-on-error {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  transform: translate3d(0, 0, 0);
+}
+
+@keyframes shake {
+  10%,
+  90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  20%,
+  80% {
+    transform: translate3d(2px, 0, 0);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  40%,
+  60% {
+    transform: translate3d(4px, 0, 0);
+  }
+}
+
+.pop-in {
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* === FORM INTERACTIONS === */
+.input-focus-ring {
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.input-focus-ring:focus {
+  border-color: var(--color-ai-blue, #00d4ff);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2);
+  outline: none;
+}
+
+.floating-label-group {
+  position: relative;
+  margin-top: 20px;
+}
+
+.floating-label {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  color: #6b7280;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+input:focus ~ .floating-label,
+input:not(:placeholder-shown) ~ .floating-label {
+  top: -18px;
+  left: 0;
+  font-size: 12px;
+  color: var(--color-ai-blue, #00d4ff);
+}
+
+/* === TOOLTIP STYLES === */
+.tooltip-trigger {
+  position: relative;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--color-bg-tertiary, #1a1a24);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  z-index: 1000;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--glass-border);
+}
+
+.tooltip-trigger:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* === STAGGERED LIST ANIMATION === */
+.stagger-list > * {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.stagger-list.active > * {
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+.stagger-list.active > *:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.stagger-list.active > *:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.stagger-list.active > *:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.stagger-list.active > *:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

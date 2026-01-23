@@ -1,3 +1,0 @@
-# Data directory
-# Stores vector database and user database
-# Excluded from git (see .gitignore)

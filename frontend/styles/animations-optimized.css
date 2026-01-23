@@ -1,0 +1,296 @@
+/* ========================================
+   PERFORMANCE-OPTIMIZED ANIMATIONS
+   60fps Hardware-Accelerated
+   ======================================== */
+
+/*  
+ * OPTIMIZATION PRINCIPLES:
+ * 1. Use transforms instead of top/left/width/height
+ * 2. Add will-change for animated elements  
+ * 3. Use contain for layout isolation
+ * 4. Minimize repaints/reflows
+ * 5. Target 60fps (16.67ms per frame)
+ */
+
+/* === HARDWARE ACCELERATION HINTS === */
+.will-animate {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* === OPTIMIZED PULSE ANIMATION === */
+@keyframes pulse-optimized {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.7;
+  }
+}
+
+.pulse-anim {
+  animation: pulse-optimized 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: transform, opacity;
+}
+
+/* === OPTIMIZED SHIMMER === */
+@keyframes shimmer-optimized {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer-anim::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer-optimized 2s linear infinite;
+  will-change: transform;
+  pointer-events: none;
+}
+
+/* === OPTIMIZED FADE IN === */
+@keyframes fadeIn-optimized {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.fadeIn-anim {
+  animation: fadeIn-optimized 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* === OPTIMIZED WAVE === */
+@keyframes wave-optimized {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -4px, 0);
+  }
+}
+
+.wave-anim {
+  animation: wave-optimized 1.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* === OPTIMIZED FLOW === */
+@keyframes flow-optimized {
+  0% {
+    transform: translateX(-10px);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(10px);
+    opacity: 0.5;
+  }
+}
+
+.flow-anim {
+  animation: flow-optimized 2s linear infinite;
+  will-change: transform, opacity;
+}
+
+/* === SKELETON LOADERS === */
+@keyframes skeleton-loading {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton {
+  position: relative;
+  background: var(--color-bg-tertiary, #1a1a24);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+  animation: skeleton-loading 1.5s infinite;
+  will-change: transform;
+}
+
+/* === SMOOTH TRANSITIONS === */
+.smooth-transition {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.smooth-transition:hover {
+  transform: translateY(-2px);
+}
+
+/* === BUTTON PRESS EFFECT === */
+.button-press {
+  transition: transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.button-press:active {
+  transform: scale(0.96);
+}
+
+/* === LOADING SPINNER - 60FPS === */
+@keyframes spin-optimized {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--color-ai-blue, #00d4ff);
+  border-radius: 50%;
+  animation: spin-optimized 800ms linear infinite;
+  will-change: transform;
+}
+
+/* === MICRO-INTERACTIONS === */
+@keyframes bounce-subtle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.hover-bounce:hover {
+  animation: bounce-subtle 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* === PERFORMANCE CONTAINMENT === */
+.contain-layout {
+  contain: layout;
+}
+
+.contain-paint {
+  contain: paint;
+}
+
+.contain-strict {
+  contain: strict;
+}
+
+/* === SCROLL snap OPTIMIZATION === */
+.scroll-smooth {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* === REDUCE MOTION (Accessibility) === */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* === Apply to Specific Elements === */
+
+/* Status dots */
+.status-dot {
+  will-change: opacity;
+}
+
+/* Usage bars */
+.usage-fill {
+  will-change: width;
+  transition: width 300ms cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* Chat messages */
+.message {
+  will-change: transform, opacity;
+  contain: layout style;
+}
+
+/* Buttons */
+.btn-icon,
+.send-btn,
+.button-press {
+  will-change: transform;
+  contain: layout paint;
+}
+
+/* Input focus */
+.chat-input {
+  transition:
+    border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Gauge animations */
+.gauge-progress {
+  will-change: stroke-dashoffset;
+}
+
+/* === LAZY LOADING PLACEHOLDER === */
+.lazy-load {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lazy-load.loaded {
+  opacity: 1;
+  transform: translateY(0);
+}
