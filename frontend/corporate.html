@@ -72,9 +72,19 @@
             </ul>
             
             <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-info">
+                        <span class="user-name" id="userName">User</span>
+                        <span class="user-status">Verified</span>
+                    </div>
+                </div>
                 <div class="theme-toggle">
                     <button id="themeToggle" class="theme-btn" title="Toggle theme">
                         <span class="theme-icon">🌙</span>
+                    </button>
+                    <button id="logoutBtn" class="theme-btn logout-btn" title="Logout">
+                        <span>🚪</span>
                     </button>
                 </div>
             </div>
@@ -125,9 +135,10 @@
             </div>
             
             <div class="input-area">
-                <button class="upload-btn" title="Upload files">
+                <button class="upload-btn" title="Upload files" id="uploadBtn">
                     <span>📎</span>
                 </button>
+                <input type="file" id="fileInput" style="display: none;" accept=".pdf,.txt,.md,.csv">
                 <input 
                     type="text" 
                     class="chat-input" 

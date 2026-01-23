@@ -10,7 +10,9 @@ const CONFIG = {
         CHAT: '/api/chat',
         MODELS: '/api/models/list',
         SECURITY: '/api/security/status',
-        METRICS: '/api/metrics/system'
+        METRICS: '/api/metrics/system',
+        WORKSPACES: '/api/workspaces',
+        HISTORY: '/api/chat/history/'
     }
 };
 
@@ -18,7 +20,9 @@ const CONFIG = {
 const state = {
     theme: 'light',
     panelCollapsed: false,
-    messages: []
+    messages: [],
+    workspaces: [],
+    currentWorkspaceId: null
 };
 
 // === DOM ELEMENTS ===
@@ -28,19 +32,203 @@ const elements = {
     chatContainer: null,
     themeToggle: null,
     collapseBtn: null,
-    aiDetails: null
+    aiDetails: null,
+    logoutBtn: null,
+    workspaceBtn: null,
+    workspaceDropdown: null
 };
 
 // === INITIALIZATION ===
 document.addEventListener('DOMContentLoaded', () => {
+    // Check authentication first
+    if (!checkAuth()) {
+        return; // Will redirect to login
+    }
+    
     initializeElements();
     initializeEventListeners();
     loadAIDetails();
     loadSystemMetrics();
+    loadUserInfo();
+    loadWorkspaces();
     
     // Auto-update metrics every 10 seconds
     setInterval(loadSystemMetrics, 10000);
 });
+
+async function loadWorkspaces() {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.WORKSPACES}`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (handleApiError(response)) return;
+        
+        const data = await response.json();
+        state.workspaces = data.workspaces;
+        
+        if (state.workspaces.length > 0) {
+            state.currentWorkspaceId = state.workspaces[0].id;
+            updateWorkspaceUI();
+            loadChatHistory(state.currentWorkspaceId);
+        }
+    } catch (error) {
+        console.error('Failed to load workspaces:', error);
+    }
+}
+
+async function loadChatHistory(workspaceId) {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.HISTORY}${workspaceId}`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (handleApiError(response)) return;
+        
+        const data = await response.json();
+        
+        // Clear chat container
+        elements.chatContainer.innerHTML = '';
+        
+        if (data.history.length === 0) {
+            showWelcomeCard();
+        } else {
+            data.history.forEach(msg => {
+                const role = msg.role === 'user' ? 'user' : 'ai';
+                addMessageToUI(role, msg.message);
+            });
+        }
+    } catch (error) {
+        console.error('Failed to load history:', error);
+    }
+}
+
+function updateWorkspaceUI() {
+    const workspaceName = document.querySelector('.workspace-name');
+    const current = state.workspaces.find(w => w.id === state.currentWorkspaceId);
+    if (workspaceName && current) {
+        workspaceName.textContent = current.name;
+    }
+    
+    // Update list
+    const list = document.querySelector('.workspace-list');
+    if (list) {
+        list.innerHTML = state.workspaces.map(w => `
+            <div class="workspace-item ${w.id === state.currentWorkspaceId ? 'active' : ''}" data-id="${w.id}">
+                <span class="workspace-icon">📁</span>
+                <span>${w.name}</span>
+            </div>
+        `).join('');
+        
+        // Add listeners
+        list.querySelectorAll('.workspace-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const id = item.dataset.id;
+                state.currentWorkspaceId = id;
+                updateWorkspaceUI();
+                loadChatHistory(id);
+            });
+        });
+    }
+}
+
+function showWelcomeCard() {
+    elements.chatContainer.innerHTML = `
+        <div class="welcome-card">
+            <div class="welcome-header">
+                <h2>Private AI Workspace</h2>
+                <p class="welcome-subtitle">Confidential. Compliant. On-premise.</p>
+            </div>
+            <div class="welcome-features">
+                <div class="feature-item">
+                    <span class="feature-check">✓</span>
+                    <span>Your data never leaves your company</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-check">✓</span>
+                    <span>GDPR, SOC 2, ISO 27001 compliant</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-check">✓</span>
+                    <span>End-to-end encrypted</span>
+                </div>
+            </div>
+            <div class="welcome-cta">
+                <p class="cta-text">Ask a question to get started</p>
+            </div>
+        </div>
+    `;
+}
+
+function addMessageToUI(type, content) {
+    // Remove welcome card if exists
+    const welcomeCard = document.querySelector('.welcome-card');
+    if (welcomeCard) {
+        welcomeCard.remove();
+    }
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    contentDiv.textContent = content;
+    
+    messageDiv.appendChild(contentDiv);
+    elements.chatContainer?.appendChild(messageDiv);
+    
+    // Scroll to bottom
+    elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
+}
+
+// === AUTHENTICATION ===
+function checkAuth() {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return false;
+    }
+    return true;
+}
+
+function getAuthHeaders() {
+    const token = localStorage.getItem('auth_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+}
+
+function logout() {
+    fetch(`${CONFIG.API_BASE_URL}/api/auth/logout`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+    }).finally(() => {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        window.location.href = 'login.html';
+    });
+}
+
+function loadUserInfo() {
+    const user = localStorage.getItem('user');
+    if (user) {
+        const userData = JSON.parse(user);
+        const userName = document.getElementById('userName');
+        if (userName) {
+            userName.textContent = userData.display_name || userData.email || 'User';
+        }
+    }
+}
+
+// Handle 401 responses globally
+function handleApiError(response) {
+    if (response.status === 401) {
+        logout();
+        return true;
+    }
+    return false;
+}
 
 function initializeElements() {
     elements.chatInput = document.getElementById('chatInput');
@@ -49,6 +237,11 @@ function initializeElements() {
     elements.themeToggle = document.getElementById('themeToggle');
     elements.collapseBtn = document.getElementById('collapseBtn');
     elements.aiDetails = document.getElementById('aiDetails');
+    elements.logoutBtn = document.getElementById('logoutBtn');
+    elements.workspaceBtn = document.getElementById('workspaceBtn');
+    elements.workspaceDropdown = document.getElementById('workspaceDropdown');
+    elements.uploadBtn = document.getElementById('uploadBtn');
+    elements.fileInput = document.getElementById('fileInput');
 }
 
 // === EVENT LISTENERS ===
@@ -58,8 +251,8 @@ function initializeEventListeners() {
     
     // Enter to send
     elements.chatInput?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Keep preventDefault to stop newline in textarea
             sendMessage();
         }
     });
@@ -70,10 +263,67 @@ function initializeEventListeners() {
     // Panel collapse
     elements.collapseBtn?.addEventListener('click', togglePanel);
     
+    // Logout
+    elements.logoutBtn?.addEventListener('click', logout);
+    
+    // Workspace dropdown
+    elements.workspaceBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        elements.workspaceDropdown?.classList.toggle('show');
+    });
+    
+    // Close dropdowns on click outside
+    document.addEventListener('click', (e) => {
+        if (!elements.workspaceBtn?.contains(e.target)) {
+            elements.workspaceDropdown?.classList.remove('show');
+        }
+    });
+
+    // File Upload Handlers
+    elements.uploadBtn?.addEventListener('click', () => elements.fileInput?.click());
+    
+    elements.fileInput?.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        await handleFileUpload(file);
+        elements.fileInput.value = ''; // Reset
+    });
+
     // Quick actions
     document.querySelectorAll('.quick-action-btn').forEach(btn => {
         btn.addEventListener('click', handleQuickAction);
     });
+}
+
+async function handleFileUpload(file) {
+    addMessageToUI('user', `📎 Uploading ${file.name}...`);
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/documents/upload`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        
+        if (handleApiError(response)) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            addMessageToUI('ai', `✅ Document "${file.name}" added to knowledge base! (${data.chunks_added} chunks)`);
+        } else {
+            addMessageToUI('ai', `❌ Upload failed: ${data.error}`);
+        }
+    } catch (error) {
+        addMessageToUI('ai', `❌ Network error: ${error.message}`);
+    }
 }
 
 // === CHAT FUNCTIONALITY ===
@@ -89,17 +339,19 @@ async function sendMessage() {
     elements.chatInput.value = '';
     
     try {
-        // Call API
+        // Call API with auth headers
         const response = await fetch(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.CHAT}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify({
                 message: message,
-                max_tokens: 256
+                max_tokens: 256,
+                workspace_id: state.currentWorkspaceId
             })
         });
+        
+        // Handle 401 (unauthorized)
+        if (handleApiError(response)) return;
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);

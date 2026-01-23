@@ -25,6 +25,46 @@ TEST_QUERIES = [
     "What are the benefits of AI?",
 ]
 
+# Global headers
+HEADERS = {"Content-Type": "application/json"}
+
+def setup_auth():
+    """Register and login a test user to get JWT token"""
+    print("\n🔐 Setting up authentication...")
+    
+    # 1. Register
+    reg_data = {
+        "email": "perf@test.com",
+        "password": "StrongPass123!",
+        "display_name": "Performance Tester"
+    }
+    
+    try:
+        requests.post(f"{API_URL}/api/auth/register", json=reg_data)
+        # Ignore error if already exists
+    except Exception:
+        pass
+        
+    # 2. Login
+    login_data = {
+        "email": "perf@test.com",
+        "password": "StrongPass123!"
+    }
+    
+    try:
+        response = requests.post(f"{API_URL}/api/auth/login", json=login_data)
+        if response.status_code == 200:
+            token = response.json().get("token")
+            print("✅ Login successful. Token acquired.")
+            HEADERS["Authorization"] = f"Bearer {token}"
+            return True
+        else:
+            print(f"❌ Login failed: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Auth error: {e}")
+        return False
+
 def test_single_request(query, test_id):
     """Test a single API request"""
     start = time.time()
@@ -33,6 +73,7 @@ def test_single_request(query, test_id):
         response = requests.post(
             f"{API_URL}/api/chat",
             json={"message": query, "max_tokens": 50},
+            headers=HEADERS,
             timeout=30
         )
         
@@ -54,7 +95,7 @@ def test_single_request(query, test_id):
                 'query': query[:50],
                 'status': 'error',
                 'response_time': elapsed,
-                'error': response.status_code
+                'error': f"Status {response.status_code}"
             }
     except Exception as e:
         elapsed = time.time() - start
@@ -83,6 +124,8 @@ def test_sequential():
         print(f"  Time: {result['response_time']:.2f}s")
         if result.get('cached'):
             print(f"  🎯 Cache HIT!")
+        if result['status'] != 'success':
+            print(f"  Error: {result.get('error')}")
     
     return results
 
@@ -121,6 +164,8 @@ def analyze_results(results, test_name="Test"):
     
     if not success:
         print("❌ No successful requests!")
+        if errors:
+            print(f"Sample error: {errors[0].get('error')}")
         return
     
     times = [r['response_time'] for r in success]
@@ -169,14 +214,41 @@ def main():
         print("\nPlease start the server first:")
         print("  python backend/api_gateway.py")
         return
+        
+    # Setup Auth
+    if not setup_auth():
+        print("⚠️ Running without auth (requests may fail if auth is required)")
     
     # Test 1: Sequential requests
     seq_results = test_sequential()
     analyze_results(seq_results, "SEQUENTIAL TEST")
     
-    # Test 2: Concurrent requests
-    # conc_results = test_concurrent(num_workers=3)
-    # analyze_results(conc_results, "CONCURRENT TEST")
+    # Test 2: Concurrent requests (Stress Test)
+    conc_results = test_concurrent(num_workers=4)
+    analyze_results(conc_results, "CONCURRENT STRESS TEST")
+    
+    # 3. Accuracy/Quality Check
+    print("\n" + "="*70)
+    print("🧠 ACCURACY & QUALITY SAMPLE")
+    print("="*70)
+    success_results = [r for r in seq_results if r['status'] == 'success']
+    if success_results:
+        # Get Sample Response
+        sample = success_results[0]
+        # We need to fetch the actual text content which wasn't stored in the result dict previously
+        # Rerun one query to show full output
+        print(f"Query: {sample['query']}")
+        try:
+            resp = requests.post(
+                f"{API_URL}/api/chat",
+                json={"message": sample['query'], "max_tokens": 100},
+                headers=HEADERS,
+                timeout=30
+            ) 
+            data = resp.json()
+            print(f"Response:\n{data.get('response', 'No response')[:500]}...")
+        except Exception as e:
+            print(f"Failed to fetch sample: {e}")
     
     print("\n" + "="*70)
     print("✅ All tests completed!")

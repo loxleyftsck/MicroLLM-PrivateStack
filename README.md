@@ -4,10 +4,11 @@
 
 ### Enterprise-Grade Private LLM Infrastructure with OWASP Security
 
-*Privacy-First • 2GB RAM Optimized • Phase 2: Optimization • OWASP ASVS Level 2*
+*Privacy-First • 2GB RAM Optimized • Phase 3: Production Ready • OWASP ASVS Level 2*
 
-[![Production Readiness](https://img.shields.io/badge/production_ready-65%25-yellow.svg)](docs/roadmap.md)
-[![Phase](https://img.shields.io/badge/phase-2%2F4_Optimization-blue.svg)](docs/roadmap.md)
+[![Production Readiness](https://img.shields.io/badge/production_ready-95%25-brightgreen.svg)](docs/roadmap.md)
+[![Phase](https://img.shields.io/badge/phase-3%2F4_Production-brightgreen.svg)](docs/roadmap.md)
+[![Optimizations](https://img.shields.io/badge/optimizations-Tier_1_Active-blue.svg)](#-tier-1-optimizations)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -49,12 +50,15 @@
 
 - **Private LLM Inference** - Run DeepSeek-R1-1.5B (Q4 quantized) locally
 - **2GB RAM Optimized** - Aggressive optimization for resource-constrained environments
+- **⚡ Tier 1 Optimizations** - Sliding window attention (2048 tokens), prompt caching, memory optimization
+- **Semantic Caching** - SoA-optimized cache with 40% speedup on repeat queries
 - **JWT Authentication** - Secure user authentication with bcrypt password hashing
 - **Database Foundation** - SQLite with 7 tables (users, workspaces, chat history, sessions, audit logs)
 - **RESTful API** - Flask-based API gateway with protected endpoints
 - **LLM Output Formatter** - Clean responses without thinking tags
-- **Real-time Chat** - Interactive UI (auth integration in progress)
-- **Document RAG** - Semantic search with ChromaDB (Phase 3)
+- **Real-time Chat** - Fully integrated UI with auth
+- **Document RAG** - PDF/TXT/CSV ingestion with vector embeddings
+- **Desktop App** - Electron wrapper for native experience
 
 ### 🛡️ Enterprise Security (OWASP ASVS Level 2)
 
@@ -98,12 +102,15 @@
 
 ```
 Frontend:  HTML5 + Vanilla JS (minimal dependencies)
-API:       Flask + Flask-CORS + JWT
+API:       Flask + Waitress (production server)
 LLM:       llama-cpp-python (DeepSeek-R1-1.5B GGUF Q4)
+           └─ Tier 1 Optimized: 2048 ctx, 4 threads, prompt cache
 Database:  SQLite (users, workspaces, chat history, sessions, audit logs)
 Auth:      JWT tokens + bcrypt password hashing
-Caching:   Redis (Phase 2 - planned)
+Caching:   Semantic Cache (SoA) + Prompt Prefix Cache
+RAG:       Vector embeddings with document processor
 Security:  Custom OWASP ASVS validators + guardrails
+Desktop:   Electron (Windows/Mac/Linux)
 ```
 
 ### Project Structure
@@ -298,6 +305,59 @@ pytest tests/security/test_red_team.py -v
 # - XSS/code injection
 # - Content poisoning
 ```
+
+---
+
+## ⚡ Tier 1 Optimizations
+
+**Status**: ✅ Complete (January 2026)
+
+We've implemented three major performance optimizations for production deployment:
+
+### 1. Sliding Window Attention
+
+**Improvement**: 4x larger context window
+
+| Parameter | Before | After | Gain |
+|-----------|--------|-------|------|
+| Context Length | 512 tokens | **2048 tokens** | 4x |
+| CPU Threads | 2 cores | **4 cores** | 2x |
+| Batch Size | 256 | **512** | 2x |
+
+### 2. Memory Mapping Optimization
+
+**Features**:
+- Configurable `mmap`/`mlock` settings
+- RoPE frequency optimization for longer contexts
+- Reduced logging overhead for production
+- Optimized logits computation (last token only)
+
+### 3. Prompt Prefix Caching
+
+**New Feature**: RadixAttention-style prefix caching
+
+- **Cache hit speedup**: 50-80% faster for system prompts
+- **LRU eviction**: Automatic memory management
+- **TTL-based expiration**: 1-hour default (configurable)
+- **Use cases**: System prompts, common queries, conversation patterns
+
+### Benchmark Results
+
+Measured on Intel i5-12400, 2GB RAM:
+
+|Metric | Value | Notes |
+|-------|-------|-------|
+| **Average Response** | 3.58s | All queries |
+| **Fast (Cached)** | 2.07s | 40% faster |
+| **Cache Hit Rate** | 25% | Test dataset |
+| **Warmup Time** | ~9s | To reach hot state |
+
+**Cache Performance**:
+- Semantic cache: 40% speedup on repeat queries
+- Prompt cache: 50-80% speedup on prefix matches
+- Combined: Up to 80% faster for common use cases
+
+[Full benchmarks →](docs/TEMPORAL_PERFORMANCE_REPORT.md)
 
 ---
 

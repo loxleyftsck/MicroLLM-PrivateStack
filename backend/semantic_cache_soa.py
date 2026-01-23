@@ -39,6 +39,7 @@ class SemanticCacheSOA:
     - Embeddings stored as (dim, n_entries) matrix for sequential access
     - Metadata stored separately in list
     - SIMD-friendly operations for similarity computation
+    - Optional Redis backend for persistence
     """
     
     def __init__(
@@ -46,7 +47,8 @@ class SemanticCacheSOA:
         dimension: int = 768,
         max_entries: int = 10000,
         similarity_threshold: float = 0.95,
-        embedding_fn=None
+        embedding_fn=None,
+        redis_client=None
     ):
         """
         Initialize semantic cache with SoA storage.
@@ -56,11 +58,14 @@ class SemanticCacheSOA:
             max_entries: Maximum cache entries before eviction
             similarity_threshold: Cosine similarity threshold for cache hit (0.95 = 95%)
             embedding_fn: Function to generate embeddings from text
+            redis_client: Optional Redis client for persistence
         """
         self.dimension = dimension
         self.max_entries = max_entries
         self.similarity_threshold = similarity_threshold
         self.embedding_fn = embedding_fn
+        self.redis_client = redis_client
+        self.redis_key_prefix = "soa_cache:"
         
         # SoA storage: each dimension is a separate array
         # Shape: (dimension, max_entries) for sequential access per dimension
@@ -77,7 +82,12 @@ class SemanticCacheSOA:
         self.total_hits = 0
         self.total_misses = 0
         
-        print(f"✅ SemanticCacheSOA initialized: {dimension}D × {max_entries} entries")
+        # Load from Redis if available
+        if self.redis_client:
+            self._load_from_redis()
+        
+        backend = "Redis" if self.redis_client else "In-Memory"
+        print(f"✅ SemanticCacheSOA initialized: {dimension}D × {max_entries} entries ({backend})")
         print(f"   Memory: {self.embeddings.nbytes / 1024**2:.2f} MB embeddings")
     
     def _generate_embedding(self, text: str) -> np.ndarray:
@@ -194,6 +204,10 @@ class SemanticCacheSOA:
             timestamp=time.time()
         )
         
+        # Save to Redis if available
+        if self.redis_client:
+            self._save_to_redis(idx)
+        
         print(f"💾 Semantic Cache SET: idx={idx}, entries={self.n_entries}")
         return idx
     
@@ -247,6 +261,72 @@ class SemanticCacheSOA:
                 count += 1
         
         return count
+    
+    def _load_from_redis(self):
+        """Load cache from Redis backend"""
+        if not self.redis_client:
+            return
+        
+        try:
+            # Get count of entries
+            count_key = f"{self.redis_key_prefix}count"
+            resp = self.redis_client.get(count_key)
+            if resp:
+                self.n_entries = int(resp.decode('utf-8'))
+                
+            # Load embeddings binary blob (DO NOT DECODE - its binary)
+            emb_key = f"{self.redis_key_prefix}embeddings"
+            emb_data = self.redis_client.get(emb_key)
+            if emb_data:
+                # Assuming raw bytes from numpy.tobytes()
+                loaded_emb = np.frombuffer(emb_data, dtype=np.float32)
+                expected_size = self.dimension * self.max_entries
+                if len(loaded_emb) == expected_size:
+                    self.embeddings = loaded_emb.reshape((self.dimension, self.max_entries))
+                    self.norms = np.linalg.norm(self.embeddings, axis=0)
+            
+            # Load metadata entries
+            for i in range(self.n_entries):
+                entry_key = f"{self.redis_key_prefix}entry:{i}"
+                entry_data = self.redis_client.get(entry_key)
+                if entry_data:
+                    data = json.loads(entry_data.decode('utf-8'))
+                    self.entries[i] = CacheEntry(**data)
+            
+            print(f"✅ Loaded {self.n_entries} entries from Redis")
+        except Exception as e:
+            print(f"⚠️ Failed to load from Redis: {e}")
+    
+    def _save_to_redis(self, idx: int):
+        """Save cache state to Redis"""
+        if not self.redis_client:
+            return
+        
+        try:
+            # Save metadata entry
+            entry = self.entries[idx]
+            if entry:
+                entry_data = {
+                    'prompt_hash': entry.prompt_hash,
+                    'prompt': entry.prompt,
+                    'response': entry.response,
+                    'timestamp': entry.timestamp,
+                    'hit_count': entry.hit_count
+                }
+                entry_key = f"{self.redis_key_prefix}entry:{idx}"
+                self.redis_client.set(entry_key, json.dumps(entry_data))
+                
+            # Save count
+            count_key = f"{self.redis_key_prefix}count"
+            self.redis_client.set(count_key, self.n_entries)
+            
+            # Save whole embeddings blob (for reliability on restart)
+            # Potentially large, but for 10000 entries of 768 float32 it's ~30MB
+            emb_key = f"{self.redis_key_prefix}embeddings"
+            self.redis_client.set(emb_key, self.embeddings.tobytes())
+            
+        except Exception as e:
+            print(f"⚠️ Failed to save to Redis: {e}")
     
     def stats(self) -> Dict[str, Any]:
         """Get cache statistics"""
@@ -369,6 +449,7 @@ def create_semantic_cache(
     max_entries: int = 10000,
     similarity_threshold: float = 0.95,
     embedding_fn=None,
+    redis_client=None,
     use_soa: bool = True
 ):
     """
@@ -376,12 +457,13 @@ def create_semantic_cache(
     
     Args:
         use_soa: Use SoA optimization (True) or legacy AoS (False)
+        redis_client: Optional Redis client for persistence (SoA only)
     
     Returns:
         SemanticCacheSOA or SemanticCacheAoS instance
     """
     if use_soa:
-        return SemanticCacheSOA(dimension, max_entries, similarity_threshold, embedding_fn)
+        return SemanticCacheSOA(dimension, max_entries, similarity_threshold, embedding_fn, redis_client)
     else:
         return SemanticCacheAoS(dimension, max_entries, similarity_threshold, embedding_fn)
 

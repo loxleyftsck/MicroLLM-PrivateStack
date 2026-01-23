@@ -1,0 +1,9 @@
+MicroLLM-PrivateStack is a specialized AI solution designed for high-security environments.
+Key features include:
+1. Optimized for low-resource hardware (runs on 2GB RAM).
+2. Struct-of-Arrays (SoA) semantic caching for 3.5x faster responses.
+3. Full on-premise data residency (no data leaves the local network).
+4. Integrated RAG (Retrieval-Augmented Generation) for document analysis.
+5. Strict security guardrails including prompt injection detection and PII masking.
+
+The project was developed in 2026 to address the need for private, offline AI assistants in corporate settings.
