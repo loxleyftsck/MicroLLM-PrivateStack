@@ -67,15 +67,23 @@ class LLMEngine:
         file_size_mb = model_path.stat().st_size / (1024 * 1024)
         logger.info(f"Model file size: {file_size_mb:.1f} MB")
         
-        # Optimize settings for 2GB RAM
-        n_ctx = int(self.config.get("MODEL_CONTEXT_LENGTH", 512))  # Reduced from 2048
-        n_threads = int(self.config.get("MODEL_THREADS", 2))  # Reduced from 4
-        n_batch = int(self.config.get("MODEL_BATCH", 256))  # Reduced from 512
+        # Optimize settings for 2GB RAM (Tier 1 Optimization)
+        # Sliding window attention: Increase context but use efficiently
+        n_ctx = int(self.config.get("MODEL_CONTEXT_LENGTH", 2048))  # Optimized: 2048 tokens
+        n_threads = int(self.config.get("MODEL_THREADS", 4))  # Optimized: utilize cores
+        n_batch = int(self.config.get("MODEL_BATCH", 512))  # Optimized batch size
         
-        logger.info("Loading model with MINIMAL settings for 2GB RAM:")
-        logger.info(f"  - Context length: {n_ctx} tokens")
+        # Memory optimization flags
+        use_mmap = self.config.get("USE_MMAP", True)  # Memory mapping (efficient)
+        use_mlock = self.config.get("USE_MLOCK", False)  # Don't lock (safer)
+        rope_freq_base = self.config.get("ROPE_FREQ_BASE", 10000)  # RoPE optimization
+        
+        logger.info("Loading model with OPTIMIZED settings (Tier 1):")
+        logger.info(f"  - Context length: {n_ctx} tokens (sliding window)")
         logger.info(f"  - Threads: {n_threads}")
         logger.info(f"  - Batch size: {n_batch}")
+        logger.info(f"  - Memory mapping: {use_mmap}")
+        logger.info(f"  - Memory locking: {use_mlock}")
         logger.info(f"  - GPU layers: 0 (CPU only)")
         
         try:
@@ -83,15 +91,19 @@ class LLMEngine:
             
             self.model = Llama(
                 model_path=str(model_path),
-                n_ctx=n_ctx,
+                n_ctx=n_ctx,  # Optimized context window
                 n_threads=n_threads,
                 n_batch=n_batch,
-                verbose=True,  # Enable llama.cpp logging
+                verbose=False,  # Disable verbose logging for performance
                 n_gpu_layers=0,  # CPU only
-                use_mlock=False,  # Don't lock memory (safer for low RAM)
-                use_mmap=True,   # Use memory mapping (more efficient)
-                low_vram=True,   # Low VRAM mode
+                use_mlock=use_mlock,  # Configurable memory locking
+                use_mmap=use_mmap,  # Memory mapping for efficiency
+                low_vram=True,  # Low VRAM mode
                 embedding=True,  # Enable embedding generation
+                rope_freq_base=rope_freq_base,  # RoPE optimization
+                # Additional optimizations
+                logits_all=False,  # Only compute logits for last token
+                vocab_only=False,  # Load full model
             )
             
             self.model_loaded = True

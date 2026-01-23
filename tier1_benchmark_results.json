@@ -1,0 +1,58 @@
+[
+  {
+    "query_num": 1,
+    "query": "What is MicroLLM?",
+    "response_length": 121,
+    "time_seconds": 3.45,
+    "status": "\u2705 OK"
+  },
+  {
+    "query_num": 2,
+    "query": "What is MicroLLM?",
+    "response_length": 121,
+    "time_seconds": 2.067,
+    "status": "\u2705 OK"
+  },
+  {
+    "query_num": 3,
+    "query": "What is MicroLLM-PrivateStack?",
+    "response_length": 172,
+    "time_seconds": 3.503,
+    "status": "\u2705 OK"
+  },
+  {
+    "query_num": 4,
+    "query": "What is MicroLLM-PrivateStack?",
+    "response_length": 172,
+    "time_seconds": 2.081,
+    "status": "\u2705 OK"
+  },
+  {
+    "query_num": 5,
+    "query": "How does the system work?",
+    "response_length": 76,
+    "time_seconds": 2.753,
+    "status": "\u2705 OK"
+  },
+  {
+    "query_num": 6,
+    "query": "How does this system function?",
+    "response_length": 271,
+    "time_seconds": 4.345,
+    "status": "\u2705 OK"
+  },
+  {
+    "query_num": 7,
+    "query": "Explain the architecture of MicroLLM-PrivateStack ",
+    "response_length": 549,
+    "time_seconds": 6.659,
+    "status": "\u2705 OK"
+  },
+  {
+    "query_num": 8,
+    "query": "What are the benefits of on-premise AI?",
+    "response_length": 621,
+    "time_seconds": 6.546,
+    "status": "\u2705 OK"
+  }
+]

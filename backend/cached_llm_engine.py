@@ -13,11 +13,13 @@ from typing import Optional, Dict, Any, Union, Generator, List
 try:
     from .llm_engine import LLMEngine
     from .semantic_cache_soa import SemanticCacheSOA, create_semantic_cache
+    from .prompt_cache import PromptPrefixCache
     logger = logging.getLogger(__name__)
 except ImportError:
     # Support running as top-level script or from api_gateway
     from llm_engine import LLMEngine
     from semantic_cache_soa import SemanticCacheSOA, create_semantic_cache
+    from prompt_cache import PromptPrefixCache
     logger = logging.getLogger("cached_llm_engine")
 
 
@@ -65,6 +67,12 @@ class CachedLLMEngine:
             use_soa=True  # Use optimized SoA layout
         )
         
+        # Initialize prompt prefix cache (Tier 1 optimization)
+        self.prompt_cache = PromptPrefixCache(
+            max_entries=100,  # Cache top 100 prefixes
+            ttl_seconds=3600  # 1 hour TTL
+        )
+        
         # Performance metrics
         self.total_requests = 0
         self.cache_hits = 0
@@ -73,10 +81,10 @@ class CachedLLMEngine:
         self.total_cache_time_ms = 0
         
         logger.info("=" * 70)
-        logger.info("CachedLLMEngine Initialized")
+        logger.info("CachedLLMEngine Initialized (Tier 1 Optimizations)")
         logger.info(f"  LLM loaded: {self.llm.model_loaded}")
-        logger.info(f"  Cache type: SoA (Struct-of-Arrays)")
-        logger.info(f"  Cache capacity: {cache_max_entries} entries")
+        logger.info(f"  Semantic cache: SoA layout, {cache_max_entries} entries")
+        logger.info(f"  Prompt cache: {self.prompt_cache.max_entries} entries")
         logger.info(f"  Similarity threshold: {similarity_threshold}")
         logger.info("=" * 70)
     
