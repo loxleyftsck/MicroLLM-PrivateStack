@@ -12,11 +12,21 @@ import logging
 from pathlib import Path
 
 # Configure logging FIRST
+# Define paths relative to backend directory
+BACKEND_DIR = Path(__file__).parent.resolve()
+PROJECT_ROOT = BACKEND_DIR.parent.resolve()
+FRONTEND_DIR = PROJECT_ROOT / "frontend"
+
+# Use absolute path for logs to avoid CWD issues
+LOGS_DIR = PROJECT_ROOT / "logs"
+LOGS_DIR.mkdir(exist_ok=True)
+LOG_FILE = LOGS_DIR / "server.log"
+
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("../logs/server.log"),
+        logging.FileHandler(str(LOG_FILE)),
         logging.StreamHandler()
     ]
 )
@@ -41,13 +51,6 @@ try:
 except ImportError as e:
     SECURITY_AVAILABLE = False
     logger.warning(f"⚠️ Security modules not available: {e}")
-
-# Initialize Flask app
-# Initialize Flask app to serve frontend
-# Define paths relative to backend directory
-BACKEND_DIR = Path(__file__).parent.resolve()
-PROJECT_ROOT = BACKEND_DIR.parent.resolve()
-FRONTEND_DIR = PROJECT_ROOT / "frontend"
 
 app = Flask(
     __name__,
@@ -126,10 +129,10 @@ from auth import AuthManager
 try:
     # Initialize database
     db = DatabaseManager(db_path='data/microllm.db')
-    logger.info(f"✅ Database initialized: {db.get_stats()}")
+    logger.info(f"[OK] Database initialized: {db.get_stats()}")
 except Exception as e:
-    logger.error(f"❌ Database initialization failed: {e}")
-    logger.warning("⚠️ Running in LIMITED MODE without database")
+    logger.error(f"[ERROR] Database initialization failed: {e}")
+    logger.warning("[WARNING] Running in LIMITED MODE without database")
 
 # Initialize auth manager
 if db: # Only try to initialize auth if db is available
@@ -155,6 +158,27 @@ except Exception as e:
     logger.warning(f"⚠️  Redis cache manager unavailable: {e}")
     cache_manager = None
 
+# ============================================
+# Initialize Batch Processor (Tier 2)
+# ============================================
+from batch_processor import ContinuousBatchProcessor
+from flask_batch_wrapper import FlaskBatchWrapper
+
+BATCH_ENABLED = os.getenv("BATCH_PROCESSOR_ENABLED", "true").lower() == "true"
+
+if BATCH_ENABLED:
+    try:
+        # Initialize the raw batch processor
+        raw_batch_processor = ContinuousBatchProcessor(
+            llm_engine=None, # Will set after cached_engine is ready
+            max_batch_size=int(os.getenv("MAX_BATCH_SIZE", 4)),
+            max_wait_ms=int(os.getenv("MAX_WAIT_MS", 100))
+        )
+        logger.info("✅ Batch processor initialized (infrastructure ready)")
+    except Exception as e:
+        logger.error(f"❌ Batch processor initialization failed: {e}")
+        BATCH_ENABLED = False
+
 # Initialize Cached LLM Engine (LLM + SoA Semantic Cache)
 logger.info("Initializing Cached LLM Engine...")
 cached_engine = create_cached_engine(
@@ -164,6 +188,19 @@ cached_engine = create_cached_engine(
 )
 llm_engine = cached_engine # Fallback for any direct references
 logger.info(f"Cached LLM Engine ready. SoA Cache active.")
+
+# Finalize Batch Processor integration
+if BATCH_ENABLED:
+    try:
+        raw_batch_processor.llm_engine = cached_engine
+        batch_wrapper = FlaskBatchWrapper(raw_batch_processor)
+        logger.info("🚀 Continuous Batching ACTIVE (Tier 2 Optimized)")
+    except Exception as e:
+        logger.error(f"❌ Failed to activate batch wrapper: {e}")
+        BATCH_ENABLED = False
+else:
+    batch_wrapper = None
+    logger.info("ℹ️ Continuous Batching is DISABLED")
 
 # Initialize RAG Engine
 try:
@@ -259,13 +296,22 @@ def chat():
 
 Question: {message}"""
         
-        # Generate response using CachedLLMEngine (handles SoA lookup and automatic caching)
-        response = cached_engine.generate(
-            prompt=full_prompt,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            stream=stream
-        )
+        # Generation strategy: Batch or Single
+        if BATCH_ENABLED and batch_wrapper:
+            logger.info(f"Using BATCH generate for request {request.headers.get('request_id', 'unknown')}")
+            response = batch_wrapper.generate(
+                prompt=full_prompt,
+                max_tokens=max_tokens,
+                temperature=temperature
+            )
+        else:
+            # Fallback to standard CachedLLMEngine (handles SoA lookup and automatic caching)
+            response = cached_engine.generate(
+                prompt=full_prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream=stream
+            )
         
         if stream:
             return jsonify({

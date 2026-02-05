@@ -68,4 +68,4 @@ Write-Host "  Average: $([math]::Round($havg,2))ms`n" -ForegroundColor Green
 Write-Host "=== SUMMARY ===" -ForegroundColor Cyan
 Write-Host "Chat avg: $([math]::Round($avg,2))s" -ForegroundColor Green
 Write-Host "Health avg: $([math]::Round($havg,2))ms" -ForegroundColor Green
-Write-Host "Status: All tests passed ✓`n" -ForegroundColor Green
+Write-Host "Status: All tests passed`n" -ForegroundColor Green
