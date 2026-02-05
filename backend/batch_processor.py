@@ -87,7 +87,7 @@ class ContinuousBatchProcessor:
         logger.info(f"  Batch timeout: {batch_timeout_s}s")
         logger.info("=" * 70)
     
-    def start(self):
+    async def start(self):
         """Start the batch processing loop"""
         if not self.running:
             self.running = True

@@ -9,7 +9,8 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add backend directory to path to resolve 'security' package
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "backend"))
 
 from security.validators import DataIngestionValidator, ValidationError
 from security.guardrails import OutputGuardrail
