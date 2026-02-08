@@ -31,3 +31,7 @@ pypdf>=4.0.0
 # ML/Embeddings
 numpy>=1.24.0
 sentence-transformers>=2.2.0
+
+# Metadata Stripping
+pillow>=10.0.0
+pikepdf>=8.0.0

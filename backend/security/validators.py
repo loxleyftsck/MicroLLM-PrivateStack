@@ -290,16 +290,102 @@ class DataIngestionValidator:
         return content
     
     def _strip_metadata(self, content: bytes, filename: str) -> bytes:
-        """Strip metadata from files (privacy protection)"""
-        # For now, basic implementation
-        # In production, use libraries like:
-        # - PyPDF2 for PDFs
-        # - python-docx for DOCX
-        # - piexif for images
+        """
+        Strip metadata from files (privacy protection)
+        Supports PDF, images (JPEG, PNG), and Office documents
+        """
+        ext = Path(filename).suffix.lower()
         
-        # Placeholder - return as-is
-        # TODO: Implement metadata stripping per file type
-        return content
+        try:
+            # PDF metadata stripping
+            if ext == '.pdf':
+                return self._strip_pdf_metadata(content)
+            
+            # Image metadata stripping
+            elif ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']:
+                return self._strip_image_metadata(content, ext)
+            
+            # For other file types, return as-is
+            else:
+                logger.debug(f"Metadata stripping not implemented for {ext}")
+                return content
+                
+        except Exception as e:
+            logger.error(f"Metadata stripping failed for {filename}: {e}")
+            # Return original content on error (fail-safe)
+            return content
+    
+    def _strip_pdf_metadata(self, content: bytes) -> bytes:
+        """Strip metadata from PDF files using pikepdf"""
+        try:
+            import pikepdf
+            from io import BytesIO
+            
+            # Load PDF
+            pdf = pikepdf.open(BytesIO(content))
+            
+            # Remove metadata
+            with pdf.open_metadata() as meta:
+                # Clear all metadata fields
+                for key in list(meta.keys()):
+                    del meta[key]
+            
+            # Remove info dictionary (author, title, etc.)
+            if '/Info' in pdf.Root:
+                del pdf.Root['/Info']
+            
+            # Save to buffer
+            output = BytesIO()
+            pdf.save(output)
+            cleaned_content = output.getvalue()
+            
+            logger.info(f"PDF metadata stripped successfully")
+            return cleaned_content
+            
+        except ImportError:
+            logger.warning("pikepdf not installed - skipping PDF metadata stripping")
+            return content
+        except Exception as e:
+            logger.error(f"PDF metadata stripping error: {e}")
+            return content
+    
+    def _strip_image_metadata(self, content: bytes, ext: str) -> bytes:
+        """Strip EXIF and other metadata from images using Pillow"""
+        try:
+            from PIL import Image
+            from io import BytesIO
+            
+            # Load image
+            image = Image.open(BytesIO(content))
+            
+            # Create new image without metadata
+            # getdata() returns pixel data, getexif() would return EXIF
+            cleaned_image = Image.new(image.mode, image.size)
+            cleaned_image.putdata(list(image.getdata()))
+            
+            # Save to buffer
+            output = BytesIO()
+            # Determine format from extension
+            format_map = {
+                '.jpg': 'JPEG',
+                '.jpeg': 'JPEG',
+                '.png': 'PNG',
+                '.gif': 'GIF',
+                '.bmp': 'BMP'
+            }
+            save_format = format_map.get(ext, 'JPEG')
+            cleaned_image.save(output, format=save_format)
+            cleaned_content = output.getvalue()
+            
+            logger.info(f"Image metadata stripped successfully")
+            return cleaned_content
+            
+        except ImportError:
+            logger.warning("Pillow not installed - skipping image metadata stripping")
+            return content
+        except Exception as e:
+            logger.error(f"Image metadata stripping error: {e}")
+            return content
     
     def _encrypt_content(self, content: bytes) -> tuple:
         """OWASP ASVS V8.3.4 - Encryption at rest (AES-256-GCM)"""

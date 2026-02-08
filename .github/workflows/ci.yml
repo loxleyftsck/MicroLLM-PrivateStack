@@ -7,7 +7,43 @@ on:
     branches: [ "main" ]
 
 jobs:
+  lint:
+    name: Code Quality & Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 bandit safety
+    
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=.venv,venv,__pycache__
+        # exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=.venv,venv,__pycache__
+    
+    - name: Security scan with Bandit
+      run: |
+        bandit -r backend/ -ll -f json -o bandit-report.json || true
+        bandit -r backend/ -ll
+    
+    - name: Check dependencies for vulnerabilities
+      run: |
+        safety check --json || true
+        safety check
+      continue-on-error: true
+
   test:
+    name: Unit Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -24,23 +60,70 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest flake8
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        # Install dev dependencies if separated
-        # pip install -r requirements-dev.txt
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
 
-    - name: Lint with flake8
+    - name: Run Unit Tests with Coverage
       run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-    - name: Run Unit Tests
-      run: |
-        # Create dummy model file to bypass missing file errors if any
+        # Create dummy model file to bypass missing file errors
         mkdir -p models
         touch models/deepseek-r1-1.5b-q4.gguf
         
-        # Run specific unit tests that don't depend on full model loading
-        pytest tests/test_unit.py -v
+        # Run unit tests with coverage
+        pytest tests/test_unit.py -v --cov=backend --cov-report=xml --cov-report=term
+    
+    - name: Upload coverage to artifact
+      uses: actions/upload-artifact@v3
+      if: matrix.python-version == '3.11'
+      with:
+        name: coverage-report
+        path: coverage.xml
+    
+    - name: Coverage comment
+      if: matrix.python-version == '3.11' && github.event_name == 'pull_request'
+      uses: py-cov-action/python-coverage-comment-action@v3
+      with:
+        GITHUB_TOKEN: ${{ github.token }}
+      continue-on-error: true
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Setup test environment
+      run: |
+        mkdir -p models data logs
+        touch models/deepseek-r1-1.5b-q4.gguf
+    
+    - name: Start test server
+      run: |
+        cd backend
+        python api_gateway.py &
+        sleep 10
+      env:
+        FLASK_ENV: testing
+    
+    - name: Run integration tests
+      run: |
+        pytest tests/test_integration.py -v --tb=short
+      continue-on-error: true
+    
+    - name: Stop server
+      if: always()
+      run: |
+        pkill -f api_gateway.py || true

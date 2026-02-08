@@ -191,19 +191,150 @@ function createDocumentsPanel() {
     return panel;
 }
 
-function handleFileUpload(event) {
+async function handleFileUpload(event) {
     const files = event.target.files;
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const ALLOWED_TYPES = ['.pdf', '.docx', '.txt', '.csv', '.md'];
     
+    // Validate files before uploading
     for (let file of files) {
-        console.log(`Uploading: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+        // File size validation
+        if (file.size > MAX_FILE_SIZE) {
+            showNotification(`File ${file.name} exceeds 10MB limit`, 'error');
+            continue;
+        }
+        
+        // File type validation
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        if (!ALLOWED_TYPES.includes(ext)) {
+            showNotification(`File type ${ext} not supported`, 'error');
+            continue;
+        }
+        
+        // Upload file with progress
+        await uploadFileToBackend(file);
+    }
+}
+
+async function uploadFileToBackend(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Create progress indicator
+    const progressId = `upload-${Date.now()}`;
+    showUploadProgress(file.name, progressId);
+    
+    try {
+        // Get auth token
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+        
+        const response = await fetch('/api/documents/upload', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Upload failed');
+        }
+        
+        const result = await response.json();
+        
+        // Update progress to complete
+        updateUploadProgress(progressId, 100, 'success');
         
         // Add to document list
         addDocumentToList(file.name, file.size);
+        
+        // Show success notification
+        showNotification(`✓ ${file.name} uploaded successfully`, 'success');
+        
+        console.log('Upload successful:', result);
+        
+    } catch (error) {
+        console.error('Upload error:', error);
+        updateUploadProgress(progressId, 0, 'error');
+        showNotification(`✗ Upload failed: ${error.message}`, 'error');
     }
-    
-    // TODO: Backend upload
-    alert(`${files.length} file(s) uploaded successfully!`);
 }
+
+function showUploadProgress(filename, progressId) {
+    const uploadZone = document.getElementById('uploadZone');
+    if (!uploadZone) return;
+    
+    const progressDiv = document.createElement('div');
+    progressDiv.id = progressId;
+    progressDiv.className = 'upload-progress';
+    progressDiv.innerHTML = `
+        <div class="progress-file">${filename}</div>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: 0%"></div>
+        </div>
+        <div class="progress-status">Uploading...</div>
+    `;
+    
+    uploadZone.after(progressDiv);
+    
+    // Simulate progress (in real app, use XHR for real progress)
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 10;
+        const fill = progressDiv.querySelector('.progress-fill');
+        if (fill) fill.style.width = `${Math.min(progress, 90)}%`;
+        if (progress >= 90) clearInterval(interval);
+    }, 200);
+}
+
+function updateUploadProgress(progressId, percent, status) {
+    const progressDiv = document.getElementById(progressId);
+    if (!progressDiv) return;
+    
+    const fill = progressDiv.querySelector('.progress-fill');
+    const statusText = progressDiv.querySelector('.progress-status');
+    
+    if (fill) fill.style.width = `${percent}%`;
+    
+    if (status === 'success') {
+        if (fill) fill.style.backgroundColor = 'var(--color-success, #22c55e)';
+        if (statusText) statusText.textContent = 'Complete ✓';
+        setTimeout(() => progressDiv.remove(), 2000);
+    } else if (status === 'error') {
+        if (fill) fill.style.backgroundColor = 'var(--color-error, #ef4444)';
+        if (statusText) statusText.textContent = 'Failed ✗';
+        setTimeout(() => progressDiv.remove(), 3000);
+    }
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 24px;
+        background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
 
 function addDocumentToList(filename, size) {
     const list = document.getElementById('documentList');
