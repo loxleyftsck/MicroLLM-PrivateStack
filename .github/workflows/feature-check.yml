@@ -1,0 +1,43 @@
+name: MicroLLM Feature Check
+
+on:
+  pull_request:
+    branches: [ "develop" ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+
+jobs:
+  check:
+    name: Feature Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-feature-${{ hashFiles('requirements*.txt') }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pytest
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    
+    - name: Fast Lint
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+    
+    - name: Fast Test
+      run: |
+        mkdir -p models
+        touch models/deepseek-r1-1.5b-q4.gguf
+        pytest tests/test_unit.py -v --tb=short

@@ -1,0 +1,42 @@
+name: MicroLLM Product Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        
+    - name: Generate Changelog
+      id: changelog
+      run: |
+        # Simple changelog from commit messages since last tag
+        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --oneline > changelog.txt
+        echo "CHANGELOG_CONTENT<<EOF" >> $GITHUB_ENV
+        cat changelog.txt >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        body: |
+          ## MicroLLM-PrivateStack ${{ github.ref_name }}
+          
+          ### Changelog
+          ${{ env.CHANGELOG_CONTENT }}
+          
+          ---
+          *Deployed via automated release workflow*
+        files: |
+          LICENSE
+          requirements.txt
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
