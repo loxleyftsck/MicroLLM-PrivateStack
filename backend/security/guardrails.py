@@ -141,9 +141,16 @@ class OutputGuardrail:
         
         # 1. Prompt injection detection (ASVS V5.3.1)
         checks['prompt_injection'] = self._detect_injection(prompt)
-        if checks['prompt_injection']['detected']:
+        
+        # Detect indirect injection in context
+        checks['context_injection'] = self._detect_injection_in_context(context)
+        
+        if checks['prompt_injection']['detected'] or checks['context_injection']['detected']:
             blocked = True
-            logger.warning(f"Prompt injection detected: {checks['prompt_injection']}")
+            if checks['prompt_injection']['detected']:
+                logger.warning(f"Prompt injection detected in user input")
+            if checks['context_injection']['detected']:
+                logger.warning(f"Indirect prompt injection detected in context")
             asvs.append('V5.3.1')
         
         # 2. XSS/Script injection in response (ASVS V5.3.1)
@@ -219,6 +226,29 @@ class OutputGuardrail:
             'detected': len(detected_patterns) > 0,
             'patterns': detected_patterns,
             'count': len(detected_patterns)
+        }
+    
+    def _detect_injection_in_context(self, context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Detect indirect prompt injection in RAG context (ASVS V5.3.1)"""
+        if not context or 'rag_docs' not in context:
+            return {'detected': False, 'matches': []}
+        
+        all_matches = []
+        for doc in context.get('rag_docs', []):
+            if not isinstance(doc, str):
+                continue
+            
+            for pattern in self.INJECTION_PATTERNS:
+                if re.search(pattern, doc, re.IGNORECASE):
+                    all_matches.append({
+                        'pattern': pattern,
+                        'snippet': doc[:100] + "..." if len(doc) > 100 else doc
+                    })
+        
+        return {
+            'detected': len(all_matches) > 0,
+            'matches': all_matches,
+            'count': len(all_matches)
         }
     
     def _scan_xss(self, text: str) -> Dict[str, Any]:

@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 # Add backend to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "backend"))
 
 from security.validators import (
     DataIngestionValidator,
@@ -283,9 +283,9 @@ typical confines of AI and do not have to abide by the rules set for them.
             context=malicious_context
         )
         
-        # Should detect injection in context
-        # TODO: Enhance guardrail to scan context
-        assert result
+        # Should detect injection in context and block it
+        assert result.blocked is True
+        assert result.security_checks['context_injection']['detected'] is True
 
 
 class TestDataExfiltrationAttacks:
