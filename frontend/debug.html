@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MicroLLM Test - Simple</title>
+    <title>MicroLLM Debug Test</title>
+    <meta name="robots" content="noindex, nofollow"><!-- prevent crawling -->
     <style>
         body {
             font-family: system-ui;
@@ -57,39 +58,77 @@
 
     <script>
         const API = 'http://localhost:8000';
-        
+
+        // ================================================================
+        // MEDIUM-1 REMEDIATION (2026-02-28): Debug Surface Gate
+        // This page is only accessible when the server reports debug_mode=true.
+        // In production (DEBUG=false in .env), the page renders an access-denied
+        // message and all test functions are disabled.
+        //
+        // WHY: debug.html auto-fired unauthenticated /api/chat requests on load,
+        // exposing the API surface to any user who navigated to the URL.
+        // The auto-run is removed; all tests require explicit button click.
+        // ================================================================
+        async function enforceDebugGate() {
+            try {
+                const res = await fetch(API + '/health');
+                const data = await res.json();
+                if (data?.debug_mode !== true) {
+                    document.body.innerHTML = `
+                        <div style="text-align:center;padding:80px;color:#ff4444">
+                            <h2>🚫 Access Denied</h2>
+                            <p>Debug interface is only available in development mode.</p>
+                            <p style="color:#888;font-size:12px">Set DEBUG=true in server config to enable.</p>
+                        </div>`;
+                    return false;
+                }
+            } catch (err) {
+                document.body.innerHTML = `
+                    <div style="text-align:center;padding:80px;color:#ff4444">
+                        <h2>⚠️ Server Unreachable</h2>
+                        <p>Could not verify debug mode. Debug interface locked.</p>
+                    </div>`;
+                return false;
+            }
+            return true;
+        }
+
         async function testHealth() {
             const div = document.getElementById('health');
-            div.innerHTML = '<p>Testing...</p>';
-            
+            div.textContent = 'Testing...';
+
             try {
                 console.log('Fetching:', API + '/health');
                 const res = await fetch(API + '/health');
                 console.log('Response status:', res.status);
                 const data = await res.json();
                 console.log('Response data:', data);
-                
-                div.innerHTML = `
-                    <p style="color: lime">✓ SUCCESS (${res.status})</p>
-                    <pre>${JSON.stringify(data, null, 2)}</pre>
-                `;
+
+                const pre = document.createElement('pre');
+                pre.textContent = JSON.stringify(data, null, 2); // textContent — safe
+                div.innerHTML = '';
+                const ok = document.createElement('p');
+                ok.style.color = 'lime';
+                ok.textContent = `✓ SUCCESS (${res.status})`;
+                div.appendChild(ok);
+                div.appendChild(pre);
             } catch (err) {
                 console.error('Error:', err);
-                div.innerHTML = `
-                    <p style="color: red">✗ FAILED</p>
-                    <pre>${err.message}</pre>
-                    <p>Check:
-                    1. API server running? (python backend/api_gateway.py)
-                    2. Port 8000 correct?
-                    3. Browser console for CORS errors (F12)</p>
-                `;
+                div.innerHTML = '';
+                const fail = document.createElement('p');
+                fail.style.color = 'red';
+                fail.textContent = '✗ FAILED';
+                const details = document.createElement('pre');
+                details.textContent = err.message; // textContent — safe
+                div.appendChild(fail);
+                div.appendChild(details);
             }
         }
-        
+
         async function testChat() {
             const div = document.getElementById('chat');
-            div.innerHTML = '<p>Sending message...</p>';
-            
+            div.textContent = 'Sending message...';
+
             try {
                 console.log('Posting to:', API + '/api/chat');
                 const res = await fetch(API + '/api/chat', {
@@ -100,24 +139,31 @@
                 console.log('Response status:', res.status);
                 const data = await res.json();
                 console.log('Response data:', data);
-                
-                div.innerHTML = `
-                    <p style="color: lime">✓ SUCCESS (${res.status})</p>
-                    <pre>${JSON.stringify(data, null, 2)}</pre>
-                `;
+
+                const pre = document.createElement('pre');
+                pre.textContent = JSON.stringify(data, null, 2); // textContent — safe
+                div.innerHTML = '';
+                const ok = document.createElement('p');
+                ok.style.color = 'lime';
+                ok.textContent = `✓ SUCCESS (${res.status})`;
+                div.appendChild(ok);
+                div.appendChild(pre);
             } catch (err) {
                 console.error('Error:', err);
-                div.innerHTML = `
-                    <p style="color: red">✗ FAILED</p>
-                    <pre>${err.message}</pre>
-                `;
+                div.innerHTML = '';
+                const fail = document.createElement('p');
+                fail.style.color = 'red';
+                fail.textContent = '✗ FAILED';
+                const details = document.createElement('pre');
+                details.textContent = err.message; // textContent — safe
+                div.appendChild(fail);
+                div.appendChild(details);
             }
         }
-        
-        // Auto-run health check
-        window.onload = () => {
-            setTimeout(testHealth, 500);
-        };
+
+        // Gate enforced on load. Auto-run of testHealth() REMOVED (was MEDIUM-1).
+        // All tests now require explicit user action.
+        window.onload = () => enforceDebugGate();
     </script>
 </body>
 </html>

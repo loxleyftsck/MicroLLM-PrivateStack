@@ -137,9 +137,42 @@ except Exception as e:
 # Initialize auth manager
 if db: # Only try to initialize auth if db is available
     try:
-        JWT_SECRET = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
+        JWT_SECRET = os.getenv("JWT_SECRET_KEY", "")
+
+        # ============================================================
+        # CRITICAL-3 REMEDIATION (2026-02-28): JWT Secret Hard-Fail
+        # Refuse to start if the JWT secret is absent, too short, or
+        # matches any known default/placeholder value.
+        # Generating a valid secret:
+        #   python -c "import secrets; print(secrets.token_hex(32))"
+        # Then:  export JWT_SECRET_KEY=<output>
+        # ============================================================
+        _KNOWN_WEAK_SECRETS = {
+            "",
+            "change-me-in-production",
+            "dev-secret-key-change-in-production",
+            "secret",
+            "changeme",
+            "your-secret-key",
+            "jwt-secret",
+        }
+        if JWT_SECRET in _KNOWN_WEAK_SECRETS or len(JWT_SECRET) < 32:
+            _msg = (
+                "\n[FATAL] JWT_SECRET_KEY is absent, too short, or matches a known weak default.\n"
+                "The server will NOT start with an insecure secret.\n"
+                "Generate a strong secret:\n"
+                "  python -c \"import secrets; print(secrets.token_hex(32))\"\n"
+                "Then set it as an OS environment variable:\n"
+                "  export JWT_SECRET_KEY=<generated-value>\n"
+            )
+            logger.critical(_msg)
+            raise SystemExit(_msg)
+        # ============================================================
+
         auth = AuthManager(secret_key=JWT_SECRET, db_manager=db)
         logger.info("✅ Auth manager initialized")
+    except SystemExit:
+        raise  # Re-raise the intentional hard-fail
     except Exception as e:
         logger.error(f"❌ Failed to initialize auth: {e}")
         logger.warning("⚠️  Authentication will be unavailable!")
@@ -220,15 +253,55 @@ logger.info("=" * 70)
 
 @app.route("/health", methods=["GET"])
 def health_check():
-    """Health check endpoint"""
+    """Health check endpoint
+
+    Returns real system metrics (cpu_percent, ram_percent, gpu_percent) so that
+    the enterprise UI can drive gauges from actual telemetry rather than
+    Math.random() simulation (MEDIUM-4 remediation).
+
+    Returns debug_mode=true only when DEBUG env is explicitly enabled, so that
+    enterprise.js only exposes window.MicroLLM in development (LOW-2 remediation).
+    """
     model_info = llm_engine.get_model_info()
-    
-    return jsonify({
+    debug_mode = os.getenv("DEBUG", "false").lower() == "true"
+
+    # Collect real system metrics
+    try:
+        import psutil
+        cpu_percent = round(psutil.cpu_percent(interval=0.1), 1)
+        ram = psutil.virtual_memory()
+        ram_percent = round(ram.percent, 1)
+        # GPU percent: optional — falls back to None if not available
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=2
+            )
+            gpu_percent = float(result.stdout.strip()) if result.returncode == 0 else None
+        except Exception:
+            gpu_percent = None
+    except Exception:
+        cpu_percent = None
+        ram_percent = None
+        gpu_percent = None
+
+    resp = {
         "status": "healthy",
         "service": "MicroLLM-PrivateStack",
-        "version": "1.0.1-optimized",
-        "model": model_info
-    }), 200
+        "version": "1.1.0-hardened",
+        "model": model_info,
+        "debug_mode": debug_mode,
+    }
+    # Only include metric fields when the data is available
+    if cpu_percent is not None:
+        resp["cpu_percent"] = cpu_percent
+    if ram_percent is not None:
+        resp["ram_percent"] = ram_percent
+    if gpu_percent is not None:
+        resp["gpu_percent"] = gpu_percent
+
+    return jsonify(resp), 200
 
 
 @app.route("/api/chat", methods=["POST"])

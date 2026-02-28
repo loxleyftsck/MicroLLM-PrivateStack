@@ -8,6 +8,12 @@ CREDENTIALS.txt
 MY_CREDENTIALS.txt
 .env
 *.env
+.env.*
+# Auth tokens — NEVER commit (rotate immediately if found)
+test_token.txt
+*.token.txt
+# Test credential + benchmark data files
+tier1_benchmark_results.json
 
 # Ignore logs
 logs/
