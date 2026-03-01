@@ -64,6 +64,10 @@ class DataIngestionValidator:
         'text/plain': ['.txt'],
         'text/csv': ['.csv'],
         'text/markdown': ['.md'],
+        'image/jpeg': ['.jpg', '.jpeg'],
+        'image/png': ['.png'],
+        'image/gif': ['.gif'],
+        'image/bmp': ['.bmp'],
     }
     
     # OWASP ASVS V5.1.1 - Size Limits
