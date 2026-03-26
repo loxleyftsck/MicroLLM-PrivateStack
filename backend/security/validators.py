@@ -328,16 +328,19 @@ class DataIngestionValidator:
             # Load PDF
             pdf = pikepdf.open(BytesIO(content))
             
-            # Remove metadata
+            # Clear XMP metadata
             with pdf.open_metadata() as meta:
-                # Clear all metadata fields
                 for key in list(meta.keys()):
                     del meta[key]
-            
-            # Remove info dictionary (author, title, etc.)
-            if '/Info' in pdf.Root:
-                del pdf.Root['/Info']
-            
+
+            # Clear Info dictionary (author, title, creator, etc.)
+            # pikepdf API: pdf.docinfo is the /Info dict proxy
+            try:
+                for key in list(pdf.docinfo.keys()):
+                    del pdf.docinfo[key]
+            except Exception:
+                pass  # docinfo may not exist — safe to skip
+
             # Save to buffer
             output = BytesIO()
             pdf.save(output)

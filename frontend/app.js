@@ -62,27 +62,43 @@ async function sendMessage() {
     }
 }
 
-// Add message to chat
+// ── Trust boundary: ALL dynamic content via textContent, never innerHTML ──
+// REMEDIATION (2026-03-26): app.js had identical XSS sink to enterprise.js
 function addMessage(role, content) {
     const messageId = `msg-${Date.now()}`;
     const messageDiv = document.createElement('div');
     messageDiv.id = messageId;
     messageDiv.className = `message ${role}`;
-    
-    const icon = role === 'user' ? '👤' : role === 'assistant' ? '🤖' : 'ℹ️';
+
+    const ICONS = { user: '👤', assistant: '🤖' };
+    const icon = ICONS[role] ?? 'ℹ️';
     const label = role.charAt(0).toUpperCase() + role.slice(1);
-    
-    messageDiv.innerHTML = `
-        <div class="message-header">
-            <span class="message-icon">${icon}</span>
-            <strong>${label}:</strong>
-        </div>
-        <div class="message-content">${content}</div>
-    `;
-    
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'message-header';
+
+    const iconEl = document.createElement('span');
+    iconEl.className = 'message-icon';
+    iconEl.textContent = icon;          // emoji — safe literal
+
+    const labelEl = document.createElement('strong');
+    labelEl.textContent = label + ':';  // role label — safe literal
+
+    header.appendChild(iconEl);
+    header.appendChild(labelEl);
+
+    // Content — UNTRUSTED: model output or user input, always textContent
+    const contentEl = document.createElement('div');
+    contentEl.className = 'message-content';
+    contentEl.textContent = String(content ?? '');
+
+    messageDiv.appendChild(header);
+    messageDiv.appendChild(contentEl);
+
     messagesDiv.appendChild(messageDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
+
     return messageId;
 }
 
