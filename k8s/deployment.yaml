@@ -1,0 +1,103 @@
+# MicroLLM-PrivateStack — Kubernetes Deployment
+# P2-2: K8s manifests for production-grade orchestration
+#
+# Apply with: kubectl apply -f k8s/
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: microllm-backend
+  namespace: microllm
+  labels:
+    app: microllm-backend
+    version: v1
+spec:
+  replicas: 1  # LLM inference: single replica (GPU/CPU bound — scale horizontally with multiple models)
+  selector:
+    matchLabels:
+      app: microllm-backend
+  strategy:
+    type: Recreate  # Ensure clean shutdown before new pod starts (model unloads from RAM/GPU)
+  template:
+    metadata:
+      labels:
+        app: microllm-backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/api/health"
+        prometheus.io/port: "8000"
+    spec:
+      # P2-2: Non-root execution (mirrors Dockerfile hardening)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+      serviceAccountName: microllm-sa
+      containers:
+        - name: api
+          image: microllm/backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: microllm-secrets
+                  key: jwt-secret-key
+            - name: CORS_ALLOWED_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: microllm-config
+                  key: cors-origins
+            - name: DEFAULT_MODEL_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: microllm-config
+                  key: default-model-id
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: microllm-config
+                  key: redis-url
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"   # Mirrors Docker compose mem_limit: 2g
+              cpu: "2000m"
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+            - name: db-data
+              mountPath: /app/backend/data
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false  # Needs write for SQLite + logs
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: microllm-models-pvc
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: microllm-db-pvc
+      restartPolicy: Always

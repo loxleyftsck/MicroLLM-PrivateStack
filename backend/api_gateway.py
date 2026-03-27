@@ -6,6 +6,13 @@ Enhanced logging and 2GB RAM optimization
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    LIMITER_AVAILABLE = True
+except ImportError:
+    LIMITER_AVAILABLE = False
+    logger.warning("flask-limiter not installed — rate limiting disabled. Run: pip install flask-limiter")
 import os
 import sys
 import logging
@@ -69,6 +76,22 @@ _allowed_origins = [
     if o.strip()
 ]
 CORS(app, origins=_allowed_origins, supports_credentials=True)
+
+# P1-1: Flask-side rate limiter (defense-in-depth; nginx also rate-limits)
+# Uses in-memory storage by default; Redis auto-used if REDIS_URL env set.
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=[],          # No default — only apply to specific endpoints
+    storage_uri=os.getenv("REDIS_URL", "memory://")
+) if LIMITER_AVAILABLE else None
+
+# Decorator helper — no-op if limiter unavailable
+def _limit(rule):
+    if limiter:
+        return limiter.limit(rule)
+    def _noop(f): return f
+    return _noop
 
 # Configuration — JWT secret injected at L140 hard-fail; no fallback stored here.
 # If JWT_SECRET_KEY env var is absent or weak the server will hard-exit below.
@@ -370,30 +393,30 @@ def chat():
                         "patterns_detected": len(pre_check['patterns'])
                     }
                 }), 403
-        
-    # ── TTFT measurement: start clock immediately before generation ──
-    import time as _time
-    _ttft_start = _time.perf_counter()
 
-    # RAG Retrieval
-    rag_context = ""
-    rag_sources = []
-    if rag_engine:
-        try:
-            results = rag_engine.search(message, top_k=2)
-            if results:
-                rag_context = "\n\nRelevant Context:\n" + "\n".join([f"- {r['text']}" for r in results])
-                rag_sources = [
-                    {
-                        "source": r.get("source", "unknown"),
-                        "score": round(float(r.get("score", 0)), 3),
-                        "chunk": r.get("text", "")[:120] + ("..." if len(r.get("text", "")) > 120 else "")
-                    }
-                    for r in results
-                ]
-                logger.info(f"RAG retrieved {len(results)} chunks")
-        except Exception as e:
-            logger.error(f"RAG search failed: {e}")
+        # ── TTFT measurement: start clock immediately before generation ──
+        import time as _time
+        _ttft_start = _time.perf_counter()
+
+        # RAG Retrieval
+        rag_context = ""
+        rag_sources = []
+        if rag_engine:
+            try:
+                results = rag_engine.search(message, top_k=2)
+                if results:
+                    rag_context = "\n\nRelevant Context:\n" + "\n".join([f"- {r['text']}" for r in results])
+                    rag_sources = [
+                        {
+                            "source": r.get("source", "unknown"),
+                            "score": round(float(r.get("score", 0)), 3),
+                            "chunk": r.get("text", "")[:120] + ("..." if len(r.get("text", "")) > 120 else "")
+                        }
+                        for r in results
+                    ]
+                    logger.info(f"RAG retrieved {len(results)} chunks")
+            except Exception as e:
+                logger.error(f"RAG search failed: {e}")
 
         # Construct Prompt
         full_prompt = message
@@ -403,7 +426,7 @@ def chat():
 {rag_context}
 
 Question: {message}"""
-        
+
         # Generation strategy: Batch or Single
         if BATCH_ENABLED and batch_wrapper:
             logger.info(f"Using BATCH generate for request {request.headers.get('request_id', 'unknown')}")
@@ -420,28 +443,27 @@ Question: {message}"""
                 temperature=temperature,
                 stream=stream
             )
-        
+
         if stream:
             return jsonify({
                 "error": "Streaming not yet implemented"
             }), 501
-        
-        # ============================================
+
         # ============================================
         # Format LLM Output (Clean & Structure)
         # ============================================
-        
+
         formatted_response = LLMOutputFormatter.format_response(response)
         logger.info(f"✅ Response formatted: {len(response)} → {len(formatted_response)} chars")
-        
+
         # Security check: Output validation (PII, secrets, toxicity)
         if output_guardrail and SECURITY_AVAILABLE:
             validation_result = output_guardrail.validate_output(
                 prompt=message,
-                response=formatted_response,  # Use formatted response
+                response=formatted_response,
                 context=None
             )
-            
+
             if validation_result.blocked:
                 logger.warning(f"⚠️ Response blocked by guardrails: {validation_result.security_checks}")
                 return jsonify({
@@ -455,20 +477,18 @@ Question: {message}"""
                         }
                     }
                 }), 403
-            
+
             # Use sanitized response (PII masked)
             safe_response = validation_result.response
-            
+
             # Save chat to history if DB is available
             if db:
                 try:
                     workspace_id = data.get("workspace_id")
-                    # Get first workspace if not provided
                     if not workspace_id:
                         workspaces = db.get_user_workspaces(request.user_id)
                         if workspaces:
                             workspace_id = workspaces[0]['id']
-                    
                     if workspace_id:
                         db.save_chat_message(workspace_id, request.user_id, 'user', message)
                         db.save_chat_message(workspace_id, request.user_id, 'assistant', safe_response)
@@ -494,13 +514,12 @@ Question: {message}"""
                 }
             })
             resp.headers["X-TTFT-Ms"] = str(_ttft_ms)
-            ttft_optimizer.record_ttft(_ttft_ms)  # Phase 5: TTFT histogram
+            ttft_optimizer.record_ttft(_ttft_ms)
             return resp, 200
         else:
             # No security validation (fallback)
             logger.warning("⚠️ Responding WITHOUT security validation")
-            
-            # Save chat to history if DB is available
+
             if db:
                 try:
                     workspace_id = data.get("workspace_id")
@@ -508,7 +527,6 @@ Question: {message}"""
                         workspaces = db.get_user_workspaces(request.user_id)
                         if workspaces:
                             workspace_id = workspaces[0]['id']
-                    
                     if workspace_id:
                         db.save_chat_message(workspace_id, request.user_id, 'user', message)
                         db.save_chat_message(workspace_id, request.user_id, 'assistant', response)
@@ -532,15 +550,16 @@ Question: {message}"""
                 }
             })
             resp.headers["X-TTFT-Ms"] = str(_ttft_ms)
-            ttft_optimizer.record_ttft(_ttft_ms)  # Phase 5: TTFT histogram
+            ttft_optimizer.record_ttft(_ttft_ms)
             return resp, 200
-        
+
     except Exception as e:
         logger.exception(f"Chat endpoint error: {e}")
         return jsonify({
             "error": str(e),
             "status": "error"
         }), 500
+
 
 
 @app.route("/api/model/info", methods=["GET"])
@@ -889,6 +908,25 @@ def upload_document():
             # Add to RAG
             count = rag_engine.add_documents(chunks)
             
+            # P1-3: Persist document metadata to DB so RAG survives restart
+            if db:
+                try:
+                    workspace_id = request.form.get('workspace_id')
+                    if not workspace_id:
+                        workspaces = db.get_user_workspaces(request.user_id)
+                        workspace_id = workspaces[0]['id'] if workspaces else None
+                    if workspace_id:
+                        db.create_document(
+                            workspace_id=workspace_id,
+                            user_id=request.user_id,
+                            filename=filename,
+                            file_path=f"rag:{filename}",  # virtual path — content stored in RAG engine
+                            file_size=len(content),
+                            mime_type=file.content_type or 'application/octet-stream'
+                        )
+                except Exception as db_e:
+                    logger.warning(f"Document DB persist failed (non-fatal): {db_e}")
+
             return jsonify({
                 "message": "Document processed and added to knowledge base",
                 "filename": filename,
