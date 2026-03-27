@@ -42,6 +42,7 @@ from cache import LLMCache
 from rag_engine import RAGEngine
 from document_processor import DocumentProcessor
 from model_registry import model_registry  # Phase 5: model selector
+from ttft_optimizer import TTFTOptimizer, warmup_in_background  # Phase 5: TTFT < 50ms
 
 # Import security modules
 try:
@@ -230,8 +231,20 @@ cached_engine = create_cached_engine(
     similarity_threshold=0.95,
     redis_client=cache_manager.redis_client if cache_manager and cache_manager.enabled else None
 )
-llm_engine = cached_engine # Fallback for any direct references
-logger.info(f"Cached LLM Engine ready. SoA Cache active.")
+llm_engine = cached_engine  # Fallback for any direct references
+logger.info("Cached LLM Engine ready. SoA Cache active.")
+
+# ── TTFT Optimizer (Phase 5) ─────────────────────────────────────────────────
+# Warms up the llama.cpp KV cache with the pinned system prompt in the
+# background so the first real request benefits from pre-computed KV state.
+ttft_optimizer: TTFTOptimizer
+try:
+    _inner_model = getattr(cached_engine.llm, 'model', None) or getattr(cached_engine.llm, '_model', None)
+    ttft_optimizer = TTFTOptimizer(llm_model=_inner_model)
+    warmup_in_background(ttft_optimizer)
+except Exception as _e:
+    logger.warning(f"TTFTOptimizer init failed (non-fatal): {_e}")
+    ttft_optimizer = TTFTOptimizer(llm_model=None)  # passthrough mode
 
 # Finalize Batch Processor integration
 if BATCH_ENABLED:
@@ -481,6 +494,7 @@ Question: {message}"""
                 }
             })
             resp.headers["X-TTFT-Ms"] = str(_ttft_ms)
+            ttft_optimizer.record_ttft(_ttft_ms)  # Phase 5: TTFT histogram
             return resp, 200
         else:
             # No security validation (fallback)
@@ -518,6 +532,7 @@ Question: {message}"""
                 }
             })
             resp.headers["X-TTFT-Ms"] = str(_ttft_ms)
+            ttft_optimizer.record_ttft(_ttft_ms)  # Phase 5: TTFT histogram
             return resp, 200
         
     except Exception as e:
@@ -828,6 +843,18 @@ def system_metrics():
             "timestamp": datetime.now().isoformat(),
             "note": "Metrics unavailable"
         }), 200
+
+
+@app.route('/api/perf/ttft', methods=['GET'])
+@auth.require_auth if auth else lambda f: f
+def ttft_stats():
+    """
+    Phase 5 — TTFT analytics endpoint.
+    Returns p50/p95/p99 histogram + KV warmup status.
+    Requires authentication (ASVS V4).
+    """
+    stats = ttft_optimizer.get_stats()
+    return jsonify(stats), 200
 
 
 # ============================================
