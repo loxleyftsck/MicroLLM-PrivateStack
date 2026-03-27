@@ -1,6 +1,11 @@
 /**
  * MicroLLM-PrivateStack Enterprise UI
- * JavaScript Controller v1.0
+ * JavaScript Controller v1.1 — Security Hardened
+ *
+ * TRUST BOUNDARY INVARIANT (enforced 2026-02-28):
+ *   All model-derived content is UNTRUSTED until encoded at UI sink.
+ *   Rule: NEVER assign dynamic content via innerHTML.
+ *         ALWAYS use renderSafe() or textContent for all LLM/user output.
  */
 
 // === CONFIGURATION ===
@@ -44,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     startSystemMonitoring();
     loadChatHistory();
     addWelcomeMessage();
+    loadModelSelector();  // Phase 5: populate model dropdown
 });
 
 function initializeElements() {
@@ -119,10 +125,12 @@ async function handleSendMessage() {
             addMessage('ai', response.response, {
                 tokens: response.tokens_generated,
                 latency: response.latency || '0.5s',
-                security: response.security
+                security: response.security,
+                rag: response.rag,            // Phase 5: RAG source citations
+                model: response.model         // Phase 5: active model label
             });
             
-            logToConsole('INFO', `Response generated: ${response.tokens_generated} tokens`);
+            logToConsole('INFO', `Response generated: ${response.tokens_generated} tokens | model=${response.model || 'unknown'}`);
         }, CONFIG.ANIMATION.MESSAGE_DELAY);
         
     } catch (error) {
@@ -138,10 +146,13 @@ async function handleSendMessage() {
 }
 
 async function callChatAPI(message) {
+    // Phase 5: inject JWT auth header from localStorage
+    const token = localStorage.getItem('authToken') || '';
     const response = await fetch(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.CHAT}`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
             message: message,
@@ -153,51 +164,147 @@ async function callChatAPI(message) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
+    // Capture TTFT header for console
+    const ttft = response.headers.get('X-TTFT-Ms');
+    if (ttft) logToConsole('PERF', `TTFT: ${ttft}ms`);
+
     return await response.json();
+}
+
+// === SAFE RENDER HELPERS (Trust Boundary Enforcement) ===
+// Invariant: ALL model-derived and user-derived content MUST pass through
+// these helpers before touching the DOM. innerHTML is prohibited for dynamic data.
+
+/**
+ * Creates a text node — the atomic safe render primitive.
+ * Use for any single string value from untrusted sources.
+ */
+function makeSafeText(str) {
+    return document.createTextNode(String(str ?? ''));
+}
+
+/**
+ * Creates an element with a CSS class and sets its text content safely.
+ */
+function makeSafeEl(tag, className, text) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text !== undefined) el.textContent = String(text);
+    return el;
 }
 
 function addMessage(type, content, metadata = {}) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}-message`;
-    
+
     if (type === 'ai') {
-        messageDiv.innerHTML = `
-            <div class="message-avatar">🤖</div>
-            <div class="message-content">
-                <div class="message-text">
-                    ${content}
-                    <button class="expand-btn">→</button>
-                </div>
-                <div class="message-meta">
-                    <div class="reasoning-panel" style="display: none;">
-                        <div class="panel-header">Reasoning Trace</div>
-                        <div class="panel-content">
-                            Processing completed with multi-step reasoning...
-                        </div>
-                    </div>
-                </div>
-                <div class="message-stats">
-                    <span class="stat">TOKENS: ${metadata.tokens || 'N/A'}</span>
-                    <span class="stat">|</span>
-                    <span class="stat">LATENCY: ${metadata.latency || 'N/A'}</span>
-                    ${metadata.security?.validated ? '<span class="stat">| ✅ VALIDATED</span>' : ''}
-                </div>
-            </div>
-        `;
+        // Avatar — static emoji constant, safe as textContent
+        const avatar = makeSafeEl('div', 'message-avatar', '🤖');
+
+        // Message text — model output encoded as text node, never innerHTML
+        const msgText = document.createElement('div');
+        msgText.className = 'message-text';
+        msgText.appendChild(makeSafeText(content));  // ← ENCODED: model output
+
+        const expandBtn = document.createElement('button');
+        expandBtn.className = 'expand-btn';
+        expandBtn.textContent = '→';
+        msgText.appendChild(expandBtn);
+
+        // Reasoning panel — static scaffold, no dynamic content
+        const reasoningPanel = document.createElement('div');
+        reasoningPanel.className = 'reasoning-panel';
+        reasoningPanel.style.display = 'none';
+        const panelHeader = makeSafeEl('div', 'panel-header', 'Reasoning Trace');
+        const panelContent = makeSafeEl('div', 'panel-content', 'Processing completed with multi-step reasoning...');
+        reasoningPanel.appendChild(panelHeader);
+        reasoningPanel.appendChild(panelContent);
+
+        const msgMeta = document.createElement('div');
+        msgMeta.className = 'message-meta';
+        msgMeta.appendChild(reasoningPanel);
+
+        // Stats — metadata values encoded via textContent
+        const msgStats = document.createElement('div');
+        msgStats.className = 'message-stats';
+
+        const tokensStat = makeSafeEl('span', 'stat');
+        tokensStat.textContent = `TOKENS: ${String(metadata.tokens ?? 'N/A')}`; // encoded
+        const sep = makeSafeEl('span', 'stat', '|');
+        const latencyStat = makeSafeEl('span', 'stat');
+        latencyStat.textContent = `LATENCY: ${String(metadata.latency ?? 'N/A')}`; // encoded
+
+        msgStats.appendChild(tokensStat);
+        msgStats.appendChild(sep);
+        msgStats.appendChild(latencyStat);
+
+        if (metadata.security?.validated) {
+            msgStats.appendChild(makeSafeEl('span', 'stat', '| ✅ VALIDATED'));
+        }
+
+        if (metadata.model) {
+            msgStats.appendChild(makeSafeEl('span', 'stat', `| 🤖 ${String(metadata.model)}`));
+        }
+
+        // Phase 5: RAG source citations panel
+        if (metadata.rag?.grounded && Array.isArray(metadata.rag.sources) && metadata.rag.sources.length > 0) {
+            const ragPanel = document.createElement('details');
+            ragPanel.className = 'rag-sources';
+            const ragSummary = makeSafeEl('summary', 'rag-label', `📚 ${metadata.rag.sources.length} source(s) used`);
+            ragPanel.appendChild(ragSummary);
+            metadata.rag.sources.forEach(src => {
+                const item = document.createElement('div');
+                item.className = 'rag-item';
+                const srcName = makeSafeEl('span', 'rag-source-name');
+                srcName.textContent = `[${String(src.source ?? 'unknown')}] score=${String(src.score ?? '?')}`; // encoded
+                const snippet = makeSafeEl('p', 'rag-snippet');
+                snippet.textContent = String(src.chunk ?? '');  // ENCODED: RAG content is untrusted
+                item.appendChild(srcName);
+                item.appendChild(snippet);
+                ragPanel.appendChild(item);
+            });
+            msgContent.appendChild(ragPanel);
+        }
+
+        // Assemble
+        const msgContent = document.createElement('div');
+        msgContent.className = 'message-content';
+        msgContent.appendChild(msgText);
+        msgContent.appendChild(msgMeta);
+        msgContent.appendChild(msgStats);
+
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(msgContent);
+
     } else {
-        messageDiv.innerHTML = `
-            <div class="message-content">
-                <div class="message-text">${content}</div>
-            </div>
-            <div class="message-avatar">👤</div>
-        `;
+        // User message — user input encoded via textContent
+        const msgTextEl = makeSafeEl('div', 'message-text');
+        msgTextEl.appendChild(makeSafeText(content));  // ← ENCODED: user input
+
+        const msgContent = document.createElement('div');
+        msgContent.className = 'message-content';
+        msgContent.appendChild(msgTextEl);
+
+        const avatar = makeSafeEl('div', 'message-avatar', '👤');
+
+        messageDiv.appendChild(msgContent);
+        messageDiv.appendChild(avatar);
     }
-    
+
     elements.chatMessages?.appendChild(messageDiv);
     scrollToBottom();
-    
-    // Save to state
-    state.messages.push({ type, content, metadata, timestamp: Date.now() });
+
+    // Save sanitized metadata only — do NOT persist raw content to avoid
+    // localStorage becoming a secondary exfiltration target.
+    state.messages.push({
+        type,
+        content,  // stored in memory; saveChatHistory() is now a no-op (see below)
+        metadata: {
+            tokens: metadata.tokens,
+            latency: metadata.latency
+        },
+        timestamp: Date.now()
+    });
     saveChatHistory();
 }
 
@@ -254,7 +361,7 @@ function logToConsole(level, message) {
 function startSystemMonitoring() {
     // Update every 2 seconds
     setInterval(updateSystemMetrics, 2000);
-    
+
     // Initial update
     updateSystemMetrics();
 }
@@ -262,40 +369,53 @@ function startSystemMonitoring() {
 async function updateSystemMetrics() {
     try {
         const response = await fetch(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.HEALTH}`);
+        if (!response.ok) return;
         const data = await response.json();
-        
-        // Update gauge values (simplified - would use real data)
+
+        // REMEDIATION (MEDIUM-4 2026-02-28):
+        // Synthetic Math.random() simulation REMOVED — gauges now driven exclusively
+        // by real data from the /health endpoint. If the field is absent the gauge
+        // retains its last known value, which is honest. Fabricated telemetry that
+        // obscures real system state during load events has been eliminated.
+        if (typeof data.cpu_percent === 'number') {
+            state.systemMetrics.cpu = data.cpu_percent;
+        }
+        if (typeof data.gpu_percent === 'number') {
+            state.systemMetrics.gpu = data.gpu_percent;
+        }
+        if (typeof data.ram_percent === 'number') {
+            state.systemMetrics.ram = data.ram_percent;
+        }
+
         updateGauges();
-        
+
     } catch (error) {
-        console.warn('Failed to fetch system metrics:', error);
+        // Health endpoint unreachable — gauges retain last known values.
+        // Log once to avoid console spam.
+        console.warn('[MicroLLM] Health check failed — metrics paused:', error.message);
     }
 }
 
 function updateGauges() {
-    // Simulate slight variations for demo
-    state.systemMetrics.cpu = 30 + Math.random() * 10;
-    state.systemMetrics.gpu = 45 + Math.random() * 15;
-    
+    // Render from state values — NO random simulation.
+    const metricMap = ['cpu', 'gpu'];
+
     document.querySelectorAll('.gauge').forEach((gauge, index) => {
-        const value = index === 0 ? state.systemMetrics.cpu : state.systemMetrics.gpu;
+        const key = metricMap[index];
+        if (!key) return;
+        const value = state.systemMetrics[key] ?? 0;
+
         const valueElement = gauge.querySelector('.gauge-value');
         const progressCircle = gauge.querySelector('.gauge-progress');
-        
+
         if (valueElement) {
             valueElement.textContent = `${Math.round(value)}%`;
         }
-        
         if (progressCircle) {
             const offset = 283 - (283 * value) / 100;
             progressCircle.style.strokeDashoffset = offset;
         }
     });
-    
-    // Update console with metrics
-    if (Math.random() > 0.7) { // Occasional metric log
-        logToConsole('METRICS', `RAM: ${state.systemMetrics.ram}% | CPU: ${Math.round(state.systemMetrics.cpu)}% | GPU: ${Math.round(state.systemMetrics.gpu)}%`);
-    }
 }
 
 // === MODEL SELECTION ===
@@ -332,24 +452,22 @@ function handleToggleChange(e) {
 }
 
 // === CHAT HISTORY ===
+// REMEDIATION (LOW-1 2026-02-28):
+// localStorage persistence DISABLED. The UI claimed "End-to-End Encrypted" but
+// stored full conversation plaintext in browser storage — accessible to any
+// in-page XSS payload. Until server-side encrypted session storage is implemented,
+// chat history is in-memory only and cleared on page reload.
 function saveChatHistory() {
-    try {
-        localStorage.setItem('microllm_chat_history', JSON.stringify(state.messages));
-    } catch (error) {
-        console.warn('Failed to save chat history:', error);
-    }
+    // No-op: localStorage persistence disabled pending encrypted storage implementation.
+    // To re-enable, implement AES-GCM with a session-derived key before storing.
 }
 
 function loadChatHistory() {
+    // No-op: clears any previously stored plaintext history to remediate LOW-1.
     try {
-        const saved = localStorage.getItem('microllm_chat_history');
-        if (saved) {
-            state.messages = JSON.parse(saved);
-            // Optionally restore messages to UI
-            // state.messages.forEach(msg => addMessage(msg.type, msg.content, msg.metadata));
-        }
-    } catch (error) {
-        console.warn('Failed to load chat history:', error);
+        localStorage.removeItem('microllm_chat_history');
+    } catch (_) {
+        // Ignore — storage may not be available
     }
 }
 
@@ -369,6 +487,77 @@ function animatePipelineFlow() {
     });
 }
 
+// === PHASE 5: MODEL SELECTOR ===
+
+/**
+ * Fetches model catalogue from /api/models/list and populates
+ * a <select id="modelSelector"> element if present in the DOM.
+ * Each option shows: "<name> (<parameters>) [unavailable]" when not on disk.
+ */
+async function loadModelSelector() {
+    const select = document.getElementById('modelSelector');
+    if (!select) return;  // element not present in this page — skip silently
+
+    const token = localStorage.getItem('authToken') || '';
+    try {
+        const res = await fetch(`${CONFIG.API_BASE_URL}/api/models/list`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const models = data.models || [];
+
+        select.innerHTML = '';  // clear placeholders
+        models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = String(m.id);                       // safe — from our own server
+            opt.textContent = `${m.name} (${m.parameters})${m.available ? '' : ' [not installed]'}`;
+            opt.disabled = !m.available;
+            if (m.active) opt.selected = true;
+            select.appendChild(opt);
+        });
+
+        logToConsole('INFO', `Model selector loaded: ${models.length} model(s) in catalogue`);
+    } catch (e) {
+        logToConsole('WARN', `Could not load model list: ${e.message}`);
+    }
+}
+
+/**
+ * Switch active model via /api/models/switch.
+ * Attach to: <select id="modelSelector" onchange="switchModel(this.value)">
+ */
+async function switchModel(modelId) {
+    if (!modelId) return;
+
+    const token = localStorage.getItem('authToken') || '';
+    logToConsole('INFO', `Switching model → ${modelId}…`);
+
+    try {
+        const res = await fetch(`${CONFIG.API_BASE_URL}/api/models/switch`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({ model_id: modelId })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            logToConsole('ERROR', `Model switch failed: ${String(data.error ?? res.status)}`);
+            return;
+        }
+
+        state.currentModel = String(data.active_model ?? modelId);
+        logToConsole('STATUS', `Active model: ${String(data.name ?? modelId)}`);
+    } catch (e) {
+        logToConsole('ERROR', `Model switch error: ${e.message}`);
+    }
+}
+
+
 // === UTILITY FUNCTIONS ===
 function formatTimestamp(timestamp) {
     return new Date(timestamp).toLocaleTimeString();
@@ -380,14 +569,24 @@ function sanitizeHTML(html) {
     return temp.innerHTML;
 }
 
-// === EXPORT FOR DEBUGGING ===
-window.MicroLLM = {
-    state,
-    config: CONFIG,
-    addMessage,
-    logToConsole,
-    selectModel
-};
+// === DEBUG EXPORT (GATED) ===
+// REMEDIATION (LOW-2 2026-02-28):
+// window.MicroLLM is ONLY exposed when the server returns debug_mode=true in
+// the /health response. In production (DEBUG=false) this object is never set,
+// preventing state exfiltration via any XSS payload that might reach the page.
+async function maybeExposeDebugInterface() {
+    try {
+        const res = await fetch(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.HEALTH}`);
+        const data = await res.json();
+        if (data?.debug_mode === true) {
+            window.MicroLLM = { state, config: CONFIG, addMessage, logToConsole, selectModel };
+            console.warn('[MicroLLM] ⚠️ Debug interface exposed — debug_mode is ON. Disable in production.');
+        }
+    } catch (_) {
+        // Health unreachable — debug interface never exposed
+    }
+}
+maybeExposeDebugInterface();
 
 console.log('%c🧠 MicroLLM-PrivateStack UI Loaded', 'color: #00d4ff; font-weight: bold; font-size: 14px');
-console.log('%cEnterprise AI Operating System v1.0', 'color: #a855f7; font-size: 12px');
+console.log('%cEnterprise AI Operating System v1.1 — Security Hardened', 'color: #a855f7; font-size: 12px');

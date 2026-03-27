@@ -7,10 +7,14 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     display_name TEXT,
+    role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user', 'admin')),  -- P1-2: RBAC
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP,
     is_active BOOLEAN DEFAULT 1
 );
+
+-- Migration for existing DBs (idempotent):
+-- ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user', 'admin'));
 
 -- Workspaces table
 CREATE TABLE IF NOT EXISTS workspaces (

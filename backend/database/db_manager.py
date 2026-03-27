@@ -53,25 +53,36 @@ class DatabaseManager:
         return conn
     
     # ==================== USER OPERATIONS ====================
-    
-    def create_user(self, email: str, password_hash: str, display_name: str) -> str:
-        """Create a new user"""
+
+    def create_user(self, email: str, password_hash: str, display_name: str, role: str = 'user') -> str:
+        """Create a new user. role must be 'user' or 'admin'."""
+        if role not in ('user', 'admin'):
+            raise ValueError(f"Invalid role: {role}")
         user_id = str(uuid.uuid4())
         conn = self.get_connection()
         try:
             conn.execute(
-                'INSERT INTO users (id, email, password_hash, display_name) VALUES (?, ?, ?, ?)',
-                (user_id, email, password_hash, display_name)
+                'INSERT INTO users (id, email, password_hash, display_name, role) VALUES (?, ?, ?, ?, ?)',
+                (user_id, email, password_hash, display_name, role)
             )
             conn.commit()
-            logger.info(f"✅ User created: {email}")
+            logger.info(f"✅ User created: {email} (role={role})")
             return user_id
         except sqlite3.IntegrityError:
             logger.warning(f"⚠️ User already exists: {email}")
             raise ValueError("Email already registered")
         finally:
             conn.close()
-    
+
+    def get_user_role(self, user_id: str) -> str:
+        """Return the user's role ('user' or 'admin'). Defaults to 'user' on miss."""
+        conn = self.get_connection()
+        try:
+            row = conn.execute('SELECT role FROM users WHERE id = ?', (user_id,)).fetchone()
+            return row['role'] if row else 'user'
+        finally:
+            conn.close()
+
     def get_user_by_email(self, email: str) -> Optional[Dict]:
         """Get user by email"""
         conn = self.get_connection()
@@ -80,7 +91,7 @@ class DatabaseManager:
             return dict(user) if user else None
         finally:
             conn.close()
-    
+
     def get_user_by_id(self, user_id: str) -> Optional[Dict]:
         """Get user by ID"""
         conn = self.get_connection()
@@ -89,7 +100,7 @@ class DatabaseManager:
             return dict(user) if user else None
         finally:
             conn.close()
-    
+
     def update_last_login(self, user_id: str):
         """Update user's last login timestamp"""
         conn = self.get_connection()
@@ -101,7 +112,62 @@ class DatabaseManager:
             conn.commit()
         finally:
             conn.close()
-    
+
+    # ==================== DOCUMENT OPERATIONS (P1-3: RAG Persistence) ====================
+
+    def create_document(
+        self,
+        workspace_id: str,
+        user_id: str,
+        filename: str,
+        file_path: str,
+        file_size: int = 0,
+        mime_type: str = 'application/octet-stream'
+    ) -> str:
+        """Persist uploaded document metadata to DB so RAG survives server restarts."""
+        doc_id = str(uuid.uuid4())
+        conn = self.get_connection()
+        try:
+            conn.execute(
+                '''INSERT INTO documents (id, workspace_id, user_id, filename, file_path, file_size, mime_type)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                (doc_id, workspace_id, user_id, filename, file_path, file_size, mime_type)
+            )
+            conn.commit()
+            logger.info(f"✅ Document persisted to DB: {filename} ({doc_id})")
+            return doc_id
+        except Exception as e:
+            logger.error(f"❌ Failed to persist document: {e}")
+            raise
+        finally:
+            conn.close()
+
+    def get_workspace_documents(self, workspace_id: str) -> List[Dict]:
+        """List all documents for a workspace."""
+        conn = self.get_connection()
+        try:
+            docs = conn.execute(
+                'SELECT * FROM documents WHERE workspace_id = ? ORDER BY uploaded_at DESC',
+                (workspace_id,)
+            ).fetchall()
+            return [dict(d) for d in docs]
+        finally:
+            conn.close()
+
+    def delete_document(self, doc_id: str, user_id: str) -> bool:
+        """Delete document (ownership check)."""
+        conn = self.get_connection()
+        try:
+            cursor = conn.execute(
+                'DELETE FROM documents WHERE id = ? AND user_id = ?',
+                (doc_id, user_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            conn.close()
+
+
     # ==================== WORKSPACE OPERATIONS ====================
     
     def create_workspace(self, user_id: str, name: str, description: str = '') -> str:

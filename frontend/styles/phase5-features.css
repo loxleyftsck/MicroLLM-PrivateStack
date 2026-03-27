@@ -1,0 +1,74 @@
+/* ============================================================
+   RAG Citations Panel — Phase 5 MicroLLM-PrivateStack
+   ============================================================ */
+
+details.rag-sources {
+    margin-top: 0.5rem;
+    border-left: 2px solid rgba(100, 200, 255, 0.3);
+    padding-left: 0.75rem;
+    font-size: 0.78rem;
+}
+
+summary.rag-label {
+    cursor: pointer;
+    color: rgba(100, 200, 255, 0.85);
+    user-select: none;
+    font-weight: 600;
+    list-style: none;
+}
+
+summary.rag-label::before {
+    content: '▶ ';
+    font-size: 0.65rem;
+}
+
+details.rag-sources[open] summary.rag-label::before {
+    content: '▼ ';
+}
+
+.rag-item {
+    margin-top: 0.4rem;
+    padding: 0.4rem 0.5rem;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 4px;
+}
+
+span.rag-source-name {
+    font-weight: 600;
+    color: rgba(150, 220, 255, 0.9);
+    display: block;
+    margin-bottom: 0.2rem;
+}
+
+p.rag-snippet {
+    margin: 0;
+    color: rgba(200, 220, 235, 0.7);
+    font-style: italic;
+    line-height: 1.4;
+}
+
+/* ============================================================
+   Model Selector Dropdown — Phase 5
+   ============================================================ */
+
+#modelSelector {
+    background: rgba(15, 20, 35, 0.85);
+    border: 1px solid rgba(100, 200, 255, 0.25);
+    border-radius: 6px;
+    color: rgba(200, 225, 255, 0.9);
+    font-size: 0.82rem;
+    padding: 0.35rem 0.6rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s ease;
+    max-width: 260px;
+}
+
+#modelSelector:hover,
+#modelSelector:focus {
+    border-color: rgba(100, 200, 255, 0.6);
+}
+
+#modelSelector option:disabled {
+    color: rgba(150, 150, 170, 0.5);
+}

@@ -4,7 +4,9 @@
 # Web Framework
 flask>=3.0.0
 flask-cors>=4.0.0
-waitress>=3.0.0
+flask-limiter>=3.5.0    # P1-1: Flask-side rate limiting (brute-force protection)
+gunicorn>=21.2.0         # Production WSGI server (mirrors Dockerfile)
+waitress>=3.0.0          # Windows dev server alternative
 
 # LLM Engine
 llama-cpp-python>=0.2.50

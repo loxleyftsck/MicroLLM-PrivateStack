@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 """
 Create Admin Account
-Run this script to create the initial admin/developer account
+Run this script to create the initial admin/developer account.
+
+SECURITY (2026-03-26):
+  - Credentials entered interactively via getpass — never hardcoded.
+  - JWT_SECRET_KEY must be set as an OS environment variable.
+    The script refuses to run with weak/default secrets.
 """
 
 import sys
 import os
+import getpass
 from pathlib import Path
 
 # Add parent directory to path
@@ -14,127 +20,122 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'backend'))
 from database import DatabaseManager
 from auth import AuthManager
 
-def create_admin_account():
-    """Create admin account for MicroLLM-PrivateStack"""
-    
+# ── Known weak JWT secrets — same blocklist as api_gateway.py ──
+_KNOWN_WEAK_SECRETS = {
+    "",
+    "change-me-in-production",
+    "dev-secret-key-change-in-production",
+    "secret",
+    "changeme",
+    "your-secret-key",
+    "jwt-secret",
+}
+
+
+def _get_jwt_secret() -> str:
+    jwt_secret = os.getenv("JWT_SECRET_KEY", "")
+    if jwt_secret in _KNOWN_WEAK_SECRETS or len(jwt_secret) < 32:
+        print(
+            "\n[FATAL] JWT_SECRET_KEY is absent, too short, or a known weak default.\n"
+            "Generate one and set it before running this script:\n"
+            "  PowerShell: $env:JWT_SECRET_KEY = "
+            "(python -c \"import secrets; print(secrets.token_hex(32))\")\n"
+        )
+        sys.exit(1)
+    return jwt_secret
+
+
+def create_admin_account() -> None:
+    """Create admin account for MicroLLM-PrivateStack (interactive)."""
     print("=" * 70)
     print("MicroLLM-PrivateStack - Admin Account Setup")
     print("=" * 70)
-    
-    # Initialize database and auth
+
+    # ── Initialise DB + Auth ──
     try:
         db = DatabaseManager(db_path='data/microllm.db')
-        print("✅ Database connected")
-        
-        # Use same secret key as in api_gateway.py
-        JWT_SECRET = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
-        auth = AuthManager(secret_key=JWT_SECRET, db_manager=db)
-        print("✅ Auth manager initialized")
-        
+        print("OK  Database connected")
+
+        jwt_secret = _get_jwt_secret()
+        auth = AuthManager(secret_key=jwt_secret, db_manager=db)
+        print("OK  Auth manager initialised")
+    except SystemExit:
+        raise
     except Exception as e:
-        print(f"❌ Failed to initialize: {e}")
+        print(f"ERR Failed to initialise: {e}")
         return
-    
-    # Admin credentials
-    admin_email = "admin@microllm.local"
-    admin_password = "Admin@123456"  # CHANGE THIS IN PRODUCTION!
-    admin_name = "System Administrator"
-    
-    print("\n📋 Creating admin account:")
-    print(f"   Email: {admin_email}")
-    print(f"   Password: {admin_password}")
-    print(f"   Name: {admin_name}")
-    
+
+    # ── Collect credentials interactively ──
+    print("\nEnter admin account credentials (nothing is hardcoded):")
+    admin_email = input("  Email: ").strip()
+    if not admin_email or '@' not in admin_email:
+        print("ERR Invalid email.")
+        return
+
+    admin_password = getpass.getpass("  Password (min 8 chars): ")
+    if len(admin_password) < 8:
+        print("ERR Password too short.")
+        return
+
+    confirm = getpass.getpass("  Confirm password: ")
+    if admin_password != confirm:
+        print("ERR Passwords do not match.")
+        return
+
+    admin_name = input("  Display name [System Administrator]: ").strip()
+    if not admin_name:
+        admin_name = "System Administrator"
+
+    # ── Create or reset user ──
     try:
-        # Check if admin already exists
-        existing_user = db.get_user_by_email(admin_email)
-        
-        if existing_user:
-            print(f"\n⚠️  Admin account already exists!")
-            print(f"   User ID: {existing_user['id']}")
-            print(f"   Created: {existing_user['created_at']}")
-            
-            # Show existing workspaces
-            workspaces = db.get_user_workspaces(existing_user['id'])
-            print(f"   Workspaces: {len(workspaces)}")
-            
-            # Ask if want to reset password
-            reset = input("\n❓ Reset admin password? (y/N): ").lower()
+        existing = db.get_user_by_email(admin_email)
+        if existing:
+            print(f"\nWARN User already exists (ID: {existing['id']})")
+            reset = input("  Delete and recreate? (y/N): ").strip().lower()
             if reset == 'y':
-                # Delete old user and recreate
-                print("⚠️  Deleting existing admin account...")
-                # Note: This will cascade delete workspaces, chats, etc.
                 conn = db.get_connection()
                 conn.execute('DELETE FROM users WHERE email = ?', (admin_email,))
                 conn.commit()
                 conn.close()
-                print("✅ Old account deleted")
+                print("OK   Old account deleted")
             else:
-                print("\n✅ Admin account ready to use!")
-                print(f"\n🔐 Login credentials:")
-                print(f"   Email: {admin_email}")
-                print(f"   Password: {admin_password}")
+                print("OK   Keeping existing account. Exiting.")
                 return
-        
-        # Create admin user
+
         user_data = auth.register_user(
             email=admin_email,
             password=admin_password,
-            display_name=admin_name
+            display_name=admin_name,
         )
-        
-        print("\n✅ Admin account created successfully!")
-        print(f"\n📊 Account details:")
-        print(f"   User ID: {user_data['user_id']}")
-        print(f"   Email: {user_data['email']}")
-        print(f"   Name: {user_data['display_name']}")
-        print(f"   Workspace ID: {user_data['workspace_id']}")
-        
-        # Create additional workspaces for admin
-        print("\n📁 Creating additional workspaces...")
-        
-        workspaces = [
+
+        print("\nOK  Admin account created successfully!")
+        print(f"    User ID   : {user_data['user_id']}")
+        print(f"    Email     : {user_data['email']}")
+        print(f"    Name      : {user_data['display_name']}")
+        print(f"    Workspace : {user_data['workspace_id']}")
+
+        # Extra workspaces
+        for ws_name, ws_desc in [
             ("Development", "Development and testing workspace"),
-            ("Production", "Production environment workspace"),
-            ("Security Audits", "Security testing and compliance")
-        ]
-        
-        for ws_name, ws_desc in workspaces:
-            ws_id = db.create_workspace(user_data['user_id'], ws_name, ws_desc)
-            print(f"   ✅ Created: {ws_name}")
-        
-        # Get database stats
+            ("Production",  "Production environment workspace"),
+            ("Security Audits", "Security testing and compliance"),
+        ]:
+            db.create_workspace(user_data['user_id'], ws_name, ws_desc)
+            print(f"    Workspace '{ws_name}' created")
+
         stats = db.get_stats()
-        print(f"\n📊 Database statistics:")
-        print(f"   Users: {stats['users']}")
-        print(f"   Workspaces: {stats['workspaces']}")
-        print(f"   Messages: {stats['messages']}")
-        print(f"   Sessions: {stats['sessions']}")
-        print(f"   Audit logs: {stats['audit_logs']}")
-        
+        print(f"\n    DB stats: {stats}")
+
         print("\n" + "=" * 70)
-        print("✅ ADMIN ACCOUNT READY!")
+        print("ADMIN ACCOUNT READY")
         print("=" * 70)
-        
-        print(f"\n🔐 Login credentials:")
-        print(f"   Email: {admin_email}")
-        print(f"   Password: {admin_password}")
-        
-        print(f"\n🌐 Access the application:")
-        print(f"   Login page: file:///{Path().absolute()}/frontend/login.html")
-        print(f"   API endpoint: http://localhost:8000")
-        
-        print(f"\n⚠️  IMPORTANT:")
-        print(f"   1. CHANGE THE PASSWORD after first login!")
-        print(f"   2. DO NOT commit this password to git")
-        print(f"   3. Store credentials securely")
-        
-        print("\n" + "=" * 70)
-        
+        print("\nLogin via: frontend/login.html")
+        print("IMPORTANT: Do not share or commit credentials.\n")
+
     except ValueError as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nERR {e}")
     except Exception as e:
-        print(f"\n❌ Unexpected error: {e}")
+        print(f"\nERR Unexpected error: {e}")
         import traceback
         traceback.print_exc()
 

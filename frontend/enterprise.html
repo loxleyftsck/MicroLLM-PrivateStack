@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MicroLLM-PrivateStack | Enterprise AI Operating System</title>
     <link rel="stylesheet" href="styles/enterprise.css">
+    <link rel="stylesheet" href="styles/phase5-features.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -26,6 +27,13 @@
                 </div>
             </div>
             <div class="header-right">
+                <!-- Phase 5: Model Selector Dropdown -->
+                <div class="model-selector-wrap" style="display:flex;align-items:center;gap:0.5rem;">
+                    <label for="modelSelector" style="font-size:0.78rem;color:rgba(150,200,240,0.7);white-space:nowrap;">Model:</label>
+                    <select id="modelSelector" onchange="switchModel(this.value)" title="Switch active LLM model">
+                        <option value="">Loading…</option>
+                    </select>
+                </div>
                 <div class="system-status">
                     <span class="status-label">STATUS:</span>
                     <span class="status-value online">ONLINE</span>

@@ -1,0 +1,165 @@
+# MicroLLM-PrivateStack — Kubernetes Services + Supporting Resources
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: microllm
+  labels:
+    app.kubernetes.io/name: microllm
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: microllm-sa
+  namespace: microllm
+  labels:
+    app: microllm-backend
+
+---
+# Headless ClusterIP service — only accessible from inside the cluster (nginx ingress proxies to it)
+apiVersion: v1
+kind: Service
+metadata:
+  name: microllm-backend
+  namespace: microllm
+  labels:
+    app: microllm-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: microllm-backend
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: http
+
+---
+# ConfigMap — non-sensitive configuration only
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: microllm-config
+  namespace: microllm
+data:
+  cors-origins: "https://your-domain.com"       # Override with your actual domain
+  default-model-id: "phi-2-q4"
+  redis-url: "memory://"                         # Replace with redis://redis:6379 if Redis deployed
+
+---
+# Secret — sensitive values must be base64-encoded
+# To create: kubectl create secret generic microllm-secrets \
+#   --from-literal=jwt-secret-key=$(openssl rand -hex 32) -n microllm
+apiVersion: v1
+kind: Secret
+metadata:
+  name: microllm-secrets
+  namespace: microllm
+type: Opaque
+data:
+  # REQUIRED: Replace this placeholder with a real base64-encoded 32+ char secret
+  # openssl rand -hex 32 | base64
+  jwt-secret-key: REPLACE_WITH_BASE64_ENCODED_SECRET
+
+---
+# Models PersistentVolumeClaim (ReadOnly — GGUF files)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: microllm-models-pvc
+  namespace: microllm
+spec:
+  accessModes:
+    - ReadOnlyMany     # Multiple pods can read; only one writer (admin provisioning)
+  resources:
+    requests:
+      storage: 10Gi    # Adjust per model file sizes (Phi-2 Q4 ≈ 2.5GB)
+
+---
+# DB PersistentVolumeClaim (SQLite data)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: microllm-db-pvc
+  namespace: microllm
+spec:
+  accessModes:
+    - ReadWriteOnce    # Single pod writes SQLite
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+# Nginx frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: microllm-nginx
+  namespace: microllm
+  labels:
+    app: microllm-nginx
+spec:
+  replicas: 2     # Nginx is stateless — scale freely
+  selector:
+    matchLabels:
+      app: microllm-nginx
+  template:
+    metadata:
+      labels:
+        app: microllm-nginx
+    spec:
+      containers:
+        - name: nginx
+          image: microllm/nginx:latest
+          ports:
+            - containerPort: 80
+            - containerPort: 443
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: ssl-certs
+              mountPath: /etc/nginx/ssl
+              readOnly: true
+      volumes:
+        - name: ssl-certs
+          secret:
+            secretName: microllm-tls
+
+---
+# Nginx Service — LoadBalancer type for cloud deployment; NodePort for bare-metal
+apiVersion: v1
+kind: Service
+metadata:
+  name: microllm-nginx
+  namespace: microllm
+spec:
+  type: LoadBalancer   # Change to NodePort for bare-metal: nodePort: 30080/30443
+  selector:
+    app: microllm-nginx
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+    - port: 443
+      targetPort: 443
+      name: https
+
+---
+# TLS Secret placeholder (managed by cert-manager in production)
+# kubectl create secret tls microllm-tls \
+#   --cert=path/to/tls.crt --key=path/to/tls.key -n microllm
+apiVersion: v1
+kind: Secret
+metadata:
+  name: microllm-tls
+  namespace: microllm
+type: kubernetes.io/tls
+data:
+  tls.crt: REPLACE_WITH_BASE64_CERT
+  tls.key: REPLACE_WITH_BASE64_KEY

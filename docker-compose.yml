@@ -1,5 +1,6 @@
 # MicroLLM-PrivateStack Docker Compose
 # Full stack with Nginx reverse proxy and Redis cache
+# Hardened (2026-03-27): JWT injected from .env, resource limits tightened
 
 version: '3.8'
 
@@ -17,24 +18,38 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_ENABLED=true
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-me-in-production}
+      # JWT_SECRET_KEY MUST come from .env file or host env — never hardcoded here
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY is required — generate with: python -c "import secrets; print(secrets.token_hex(32))"}
       - MODEL_PATH=/app/models/deepseek-r1-1.5b-q4.gguf
       - MODEL_CONTEXT_LENGTH=512
       - MODEL_THREADS=2
+      - MODEL_BATCH=256
+      - DEBUG=false
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:8000}
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
-      - ./models:/app/models:ro
+      - ./models:/app/models:ro   # read-only — model binary should never be modified
     networks:
       - microllm-network
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     deploy:
       resources:
         limits:
-          memory: 3G
+          memory: 2G        # Hard cap at 2GB per paper spec
+          cpus: '2.0'
         reservations:
-          memory: 2G
+          memory: 1G
+    security_opt:
+      - no-new-privileges:true  # Prevent privilege escalation
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
 
   # ============================================
   # Redis Cache
@@ -43,7 +58,7 @@ services:
     image: redis:7-alpine
     container_name: microllm-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-}
     volumes:
       - redis-data:/data
     networks:
@@ -53,6 +68,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 300m
 
   # ============================================
   # Nginx Reverse Proxy (HTTPS)
@@ -62,8 +81,8 @@ services:
     container_name: microllm-nginx
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
@@ -71,11 +90,19 @@ services:
     networks:
       - microllm-network
     depends_on:
-      - app
+      app:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128m
 
 networks:
   microllm-network:
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: microllm0
 
 volumes:
   redis-data:
+    driver: local

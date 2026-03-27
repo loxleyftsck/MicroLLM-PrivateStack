@@ -295,17 +295,17 @@
                     throw new Error(data.error || 'Authentication failed');
                 }
                 
-                // Store token
-                localStorage.setItem('auth_token', data.token);
+                // Store token — key must match enterprise.js (authToken)
+                localStorage.setItem('authToken', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
                 
                 // Show success
                 showSuccess(isLoginMode ? 'Login successful!' : 'Account created!');
                 
-                // Redirect to corporate.html
+                // Redirect to enterprise dashboard
                 setTimeout(() => {
-                    window.location.href = 'corporate.html';
-                }, 1000);
+                    window.location.href = 'enterprise.html';
+                }, 800);
                 
             } catch (error) {
                 showError(error.message);
@@ -329,10 +329,10 @@
             successMessage.style.display = 'none';
         }
         
-        // Check if already logged in
-        const token = localStorage.getItem('auth_token');
+        // Auto-redirect to dashboard if already authenticated
+        const token = localStorage.getItem('authToken');
         if (token) {
-            window.location.href = 'corporate.html';
+            window.location.href = 'enterprise.html';
         }
     </script>
 </body>
