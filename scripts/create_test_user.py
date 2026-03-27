@@ -21,7 +21,11 @@ def create_test_user():
     # Initialize database and auth
     try:
         db = DatabaseManager(db_path='data/microllm.db')
-        JWT_SECRET = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
+        JWT_SECRET = os.getenv("JWT_SECRET_KEY")
+        if not JWT_SECRET:
+            print("[ERROR] JWT_SECRET_KEY environment variable not set. Exiting.")
+            print("  export JWT_SECRET_KEY=$(python -c \"import secrets; print(secrets.token_hex(32))\")")
+            return
         auth = AuthManager(secret_key=JWT_SECRET, db_manager=db)
         
     except Exception as e:

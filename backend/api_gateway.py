@@ -590,6 +590,7 @@ def debug_reload():
 # ============================================
 
 @app.route("/api/auth/register", methods=["POST"])
+@_limit("3/minute")  # P1-1: Brute-force protection
 def register():
     """User registration endpoint"""
     if not auth:
@@ -625,6 +626,7 @@ def register():
 
 
 @app.route("/api/auth/login", methods=["POST"])
+@_limit("5/minute")  # P1-1: Brute-force protection
 def login():
     """User login endpoint"""
     if not auth:
