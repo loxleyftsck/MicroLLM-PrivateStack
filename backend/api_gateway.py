@@ -41,6 +41,7 @@ from llm_formatter import LLMOutputFormatter
 from cache import LLMCache
 from rag_engine import RAGEngine
 from document_processor import DocumentProcessor
+from model_registry import model_registry  # Phase 5: model selector
 
 # Import security modules
 try:
@@ -57,10 +58,20 @@ app = Flask(
     static_folder=str(FRONTEND_DIR),
     static_url_path=''
 )
-CORS(app)
 
-# Configuration
-app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
+# ASVS V14.4.8 — Restrict CORS to trusted origins only.
+# Set CORS_ALLOWED_ORIGINS env var to a comma-separated list.
+# Example: CORS_ALLOWED_ORIGINS=https://app.company.com,https://admin.company.com
+_allowed_origins = [
+    o.strip()
+    for o in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost,http://localhost:8000,http://127.0.0.1:8000").split(",")
+    if o.strip()
+]
+CORS(app, origins=_allowed_origins, supports_credentials=True)
+
+# Configuration — JWT secret injected at L140 hard-fail; no fallback stored here.
+# If JWT_SECRET_KEY env var is absent or weak the server will hard-exit below.
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "")
 
 # Initialize LLM Engine with ABSOLUTE path
 logger.info("=" * 70)
@@ -347,18 +358,29 @@ def chat():
                     }
                 }), 403
         
-        # RAG Retrieval
-        rag_context = ""
-        rag_sources = []
-        if rag_engine:
-            try:
-                results = rag_engine.search(message, top_k=2)
-                if results:
-                    rag_context = "\n\nRelevant Context:\n" + "\n".join([f"- {r['text']}" for r in results])
-                    rag_sources = [r.get('source', 'unknown') for r in results]
-                    logger.info(f"RAG retrieved {len(results)} chunks")
-            except Exception as e:
-                logger.error(f"RAG search failed: {e}")
+    # ── TTFT measurement: start clock immediately before generation ──
+    import time as _time
+    _ttft_start = _time.perf_counter()
+
+    # RAG Retrieval
+    rag_context = ""
+    rag_sources = []
+    if rag_engine:
+        try:
+            results = rag_engine.search(message, top_k=2)
+            if results:
+                rag_context = "\n\nRelevant Context:\n" + "\n".join([f"- {r['text']}" for r in results])
+                rag_sources = [
+                    {
+                        "source": r.get("source", "unknown"),
+                        "score": round(float(r.get("score", 0)), 3),
+                        "chunk": r.get("text", "")[:120] + ("..." if len(r.get("text", "")) > 120 else "")
+                    }
+                    for r in results
+                ]
+                logger.info(f"RAG retrieved {len(results)} chunks")
+        except Exception as e:
+            logger.error(f"RAG search failed: {e}")
 
         # Construct Prompt
         full_prompt = message
@@ -440,18 +462,26 @@ Question: {message}"""
                 except Exception as e:
                     logger.error(f"Failed to save chat history: {e}")
 
-            return jsonify({
+            _ttft_ms = round((_time.perf_counter() - _ttft_start) * 1000, 2)
+            resp = jsonify({
                 "response": safe_response,
                 "status": "success",
+                "model": model_registry.active_id,
                 "model_loaded": llm_engine.model_loaded,
                 "tokens_generated": len(formatted_response.split()),
+                "rag": {
+                    "grounded": len(rag_sources) > 0,
+                    "sources": rag_sources
+                },
                 "security": {
                     "validated": True,
                     "confidence_score": validation_result.confidence_score,
                     "warnings": validation_result.warnings,
                     "asvs_compliance": validation_result.asvs_compliance
                 }
-            }), 200
+            })
+            resp.headers["X-TTFT-Ms"] = str(_ttft_ms)
+            return resp, 200
         else:
             # No security validation (fallback)
             logger.warning("⚠️ Responding WITHOUT security validation")
@@ -471,16 +501,24 @@ Question: {message}"""
                 except Exception as e:
                     logger.error(f"Failed to save chat history: {e}")
 
-            return jsonify({
+            _ttft_ms = round((_time.perf_counter() - _ttft_start) * 1000, 2)
+            resp = jsonify({
                 "response": response,
                 "status": "success",
+                "model": model_registry.active_id,
                 "model_loaded": llm_engine.model_loaded,
                 "tokens_generated": len(response.split()),
+                "rag": {
+                    "grounded": len(rag_sources) > 0,
+                    "sources": rag_sources
+                },
                 "security": {
                     "validated": False,
                     "warning": "Security modules not available"
                 }
-            }), 200
+            })
+            resp.headers["X-TTFT-Ms"] = str(_ttft_ms)
+            return resp, 200
         
     except Exception as e:
         logger.exception(f"Chat endpoint error: {e}")
@@ -491,17 +529,19 @@ Question: {message}"""
 
 
 @app.route("/api/model/info", methods=["GET"])
+@auth.require_auth if auth else lambda f: f  # ASVS V4 — model metadata is auth-only
 def model_info():
-    """Get detailed model information"""
+    """Get detailed model information — requires authentication"""
     return jsonify(llm_engine.get_model_info()), 200
 
 
 @app.route("/api/debug/reload", methods=["POST"])
+@auth.require_auth if auth else lambda f: f  # ASVS V4 — model reload must be authenticated; unauthenticated reload = DoS vector
 def debug_reload():
-    """Debug endpoint to reload model"""
+    """Debug endpoint to reload model — requires authentication"""
     global llm_engine
     
-    logger.info("Manual model reload requested")
+    logger.info(f"Manual model reload requested by user {getattr(request, 'user_email', 'unknown')}")
     llm_engine = LLMEngine(llm_config)
     
     return jsonify({
@@ -691,28 +731,57 @@ def get_chat_history(workspace_id):
 # ============================================
 
 @app.route('/api/models/list', methods=['GET'])
+@auth.require_auth if auth else lambda f: f
 def list_models():
-    """Return actual loaded model info for corporate UI"""
+    """Return model catalogue with availability — requires authentication"""
     logger.info("Model list requested")
-    
+    return jsonify({"models": model_registry.list_models()}), 200
+
+
+@app.route('/api/models/switch', methods=['POST'])
+@auth.require_auth if auth else lambda f: f
+def switch_model():
+    """
+    Switch the active LLM model at runtime.
+    Phase 5: Model Selector — requires authentication.
+    Body: {"model_id": "deepseek-r1-7b-q4"}
+    """
+    global cached_engine, llm_engine
     try:
-        model_info = llm_engine.get_model_info()
-        
+        data = request.get_json()
+        model_id = data.get("model_id", "").strip()
+        if not model_id:
+            return jsonify({"error": "model_id is required"}), 400
+
+        new_model = model_registry.switch(model_id)
+
+        # Rebuild engine with new model path
+        new_config = dict(llm_config)
+        new_config["MODEL_PATH"] = new_model["path"]
+        new_config["MODEL_CONTEXT_LENGTH"] = str(new_model["context_length"])
+        new_config["MODEL_THREADS"] = str(new_model["recommended_threads"])
+        new_config["MODEL_BATCH"] = str(new_model["recommended_batch"])
+
+        cached_engine = create_cached_engine(new_config, similarity_threshold=0.95)
+        llm_engine = cached_engine
+
+        logger.info(f"Model switched to '{model_id}' by {getattr(request, 'user_email', 'unknown')}")
         return jsonify({
-            "loaded": "DeepSeek-R1-1.5B",
-            "status": "active",
-            "parameters": "1.5B",
-            "context_length": model_info.get("context_length", 512),
-            "model_path": str(MODEL_PATH)
+            "status": "switched",
+            "active_model": model_id,
+            "name": new_model["name"]
         }), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
-        logger.error(f"Model list failed: {e}")
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Model switch failed: {e}")
+        return jsonify({"error": "Failed to switch model"}), 500
 
 
 @app.route('/api/security/status', methods=['GET'])
+@auth.require_auth if auth else lambda f: f  # ASVS V4 — discloses which guardrails are active
 def security_status():
-    """Return security and compliance information"""
+    """Return security and compliance info — requires authentication"""
     logger.info("Security status requested")
     
     return jsonify({
@@ -729,8 +798,9 @@ def security_status():
 
 
 @app.route('/api/metrics/system', methods=['GET'])
+@auth.require_auth if auth else lambda f: f  # ASVS V4 — CPU/RAM fingerprinting risk
 def system_metrics():
-    """Return real system metrics for corporate UI"""
+    """Return real system metrics for corporate UI — requires authentication"""
     logger.info("System metrics requested")
     
     try:

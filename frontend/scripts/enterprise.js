@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     startSystemMonitoring();
     loadChatHistory();
     addWelcomeMessage();
+    loadModelSelector();  // Phase 5: populate model dropdown
 });
 
 function initializeElements() {
@@ -124,10 +125,12 @@ async function handleSendMessage() {
             addMessage('ai', response.response, {
                 tokens: response.tokens_generated,
                 latency: response.latency || '0.5s',
-                security: response.security
+                security: response.security,
+                rag: response.rag,            // Phase 5: RAG source citations
+                model: response.model         // Phase 5: active model label
             });
             
-            logToConsole('INFO', `Response generated: ${response.tokens_generated} tokens`);
+            logToConsole('INFO', `Response generated: ${response.tokens_generated} tokens | model=${response.model || 'unknown'}`);
         }, CONFIG.ANIMATION.MESSAGE_DELAY);
         
     } catch (error) {
@@ -143,10 +146,13 @@ async function handleSendMessage() {
 }
 
 async function callChatAPI(message) {
+    // Phase 5: inject JWT auth header from localStorage
+    const token = localStorage.getItem('authToken') || '';
     const response = await fetch(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.CHAT}`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
             message: message,
@@ -158,6 +164,10 @@ async function callChatAPI(message) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
+    // Capture TTFT header for console
+    const ttft = response.headers.get('X-TTFT-Ms');
+    if (ttft) logToConsole('PERF', `TTFT: ${ttft}ms`);
+
     return await response.json();
 }
 
@@ -230,6 +240,30 @@ function addMessage(type, content, metadata = {}) {
 
         if (metadata.security?.validated) {
             msgStats.appendChild(makeSafeEl('span', 'stat', '| ✅ VALIDATED'));
+        }
+
+        if (metadata.model) {
+            msgStats.appendChild(makeSafeEl('span', 'stat', `| 🤖 ${String(metadata.model)}`));
+        }
+
+        // Phase 5: RAG source citations panel
+        if (metadata.rag?.grounded && Array.isArray(metadata.rag.sources) && metadata.rag.sources.length > 0) {
+            const ragPanel = document.createElement('details');
+            ragPanel.className = 'rag-sources';
+            const ragSummary = makeSafeEl('summary', 'rag-label', `📚 ${metadata.rag.sources.length} source(s) used`);
+            ragPanel.appendChild(ragSummary);
+            metadata.rag.sources.forEach(src => {
+                const item = document.createElement('div');
+                item.className = 'rag-item';
+                const srcName = makeSafeEl('span', 'rag-source-name');
+                srcName.textContent = `[${String(src.source ?? 'unknown')}] score=${String(src.score ?? '?')}`; // encoded
+                const snippet = makeSafeEl('p', 'rag-snippet');
+                snippet.textContent = String(src.chunk ?? '');  // ENCODED: RAG content is untrusted
+                item.appendChild(srcName);
+                item.appendChild(snippet);
+                ragPanel.appendChild(item);
+            });
+            msgContent.appendChild(ragPanel);
         }
 
         // Assemble
@@ -452,6 +486,77 @@ function animatePipelineFlow() {
         connector.style.animationPlayState = state.isProcessing ? 'running' : 'paused';
     });
 }
+
+// === PHASE 5: MODEL SELECTOR ===
+
+/**
+ * Fetches model catalogue from /api/models/list and populates
+ * a <select id="modelSelector"> element if present in the DOM.
+ * Each option shows: "<name> (<parameters>) [unavailable]" when not on disk.
+ */
+async function loadModelSelector() {
+    const select = document.getElementById('modelSelector');
+    if (!select) return;  // element not present in this page — skip silently
+
+    const token = localStorage.getItem('authToken') || '';
+    try {
+        const res = await fetch(`${CONFIG.API_BASE_URL}/api/models/list`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const models = data.models || [];
+
+        select.innerHTML = '';  // clear placeholders
+        models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = String(m.id);                       // safe — from our own server
+            opt.textContent = `${m.name} (${m.parameters})${m.available ? '' : ' [not installed]'}`;
+            opt.disabled = !m.available;
+            if (m.active) opt.selected = true;
+            select.appendChild(opt);
+        });
+
+        logToConsole('INFO', `Model selector loaded: ${models.length} model(s) in catalogue`);
+    } catch (e) {
+        logToConsole('WARN', `Could not load model list: ${e.message}`);
+    }
+}
+
+/**
+ * Switch active model via /api/models/switch.
+ * Attach to: <select id="modelSelector" onchange="switchModel(this.value)">
+ */
+async function switchModel(modelId) {
+    if (!modelId) return;
+
+    const token = localStorage.getItem('authToken') || '';
+    logToConsole('INFO', `Switching model → ${modelId}…`);
+
+    try {
+        const res = await fetch(`${CONFIG.API_BASE_URL}/api/models/switch`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({ model_id: modelId })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            logToConsole('ERROR', `Model switch failed: ${String(data.error ?? res.status)}`);
+            return;
+        }
+
+        state.currentModel = String(data.active_model ?? modelId);
+        logToConsole('STATUS', `Active model: ${String(data.name ?? modelId)}`);
+    } catch (e) {
+        logToConsole('ERROR', `Model switch error: ${e.message}`);
+    }
+}
+
 
 // === UTILITY FUNCTIONS ===
 function formatTimestamp(timestamp) {
