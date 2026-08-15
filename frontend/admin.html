@@ -422,7 +422,7 @@
         async function refreshAll() {
             try {
                 // Fetch health data
-                const healthResp = await fetch('/api/health');
+                const healthResp = await fetch('/health');
                 if (healthResp.ok) {
                     const health = await healthResp.json();
                     
