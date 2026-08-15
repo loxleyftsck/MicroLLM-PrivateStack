@@ -24,7 +24,7 @@ spec:
         app: microllm-backend
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/path: "/api/health"
+        prometheus.io/path: "/health"
         prometheus.io/port: "8000"
     spec:
       # P2-2: Non-root execution (mirrors Dockerfile hardening)
@@ -77,14 +77,14 @@ spec:
               mountPath: /app/backend/data
           livenessProbe:
             httpGet:
-              path: /api/health
+              path: /health
               port: 8000
             initialDelaySeconds: 30
             periodSeconds: 30
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /api/health
+              path: /health
               port: 8000
             initialDelaySeconds: 15
             periodSeconds: 10

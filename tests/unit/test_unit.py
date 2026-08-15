@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 
 # Add backend to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "backend"))
 
 class TestDocumentProcessor:
     """Tests for document_processor.py"""

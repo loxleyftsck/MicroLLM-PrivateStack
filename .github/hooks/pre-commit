@@ -49,10 +49,12 @@ SECRET_PATTERNS = [
 # ── Files / patterns to skip ──────────────────────────────────────────────────
 SKIP_PATHS = {
     '.github/hooks/pre-commit',        # this file — contains patterns, not secrets
-    'tests/stress-test-adversarial.ps1',  # contains test payloads (fake tokens)
+    'tests/security/stress-test-adversarial.ps1',  # contains test payloads (fake/forged tokens)
     'backend/security/guardrails.py',  # contains detection patterns
     'backend/api_gateway.py',          # contains _KNOWN_WEAK_SECRETS blocklist
                                        # for startup validation — not actual secrets
+    'tests/unit/test_unit.py',         # contains fixture password ("TestPassword123!")
+                                       # used to exercise registration/login — not a real secret
 }
 
 SKIP_EXTENSIONS = {'.pyc', '.png', '.jpg', '.jpeg', '.gif', '.ico',
@@ -61,14 +63,14 @@ SKIP_EXTENSIONS = {'.pyc', '.png', '.jpg', '.jpeg', '.gif', '.ico',
 def get_staged_files():
     result = subprocess.run(
         ['git', 'diff', '--cached', '--name-only', '--diff-filter=ACMR'],
-        capture_output=True, text=True
+        capture_output=True, encoding='utf-8', errors='replace'
     )
     return [f.strip() for f in result.stdout.splitlines() if f.strip()]
 
 def get_staged_diff(filepath):
     result = subprocess.run(
         ['git', 'diff', '--cached', '-U0', '--', filepath],
-        capture_output=True, text=True
+        capture_output=True, encoding='utf-8', errors='replace'
     )
     # Only scan added lines (lines starting with '+' but not '+++')
     added = [line[1:] for line in result.stdout.splitlines()
@@ -84,6 +86,14 @@ def scan_content(content, filepath):
     return findings
 
 def main():
+    # Windows consoles default stdout to a legacy codepage (e.g. cp1252),
+    # which can't encode the emoji used below — reconfigure to UTF-8 so the
+    # hook reports findings instead of crashing past them.
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except (AttributeError, ValueError):
+        pass
+
     staged = get_staged_files()
     all_findings = []
 
