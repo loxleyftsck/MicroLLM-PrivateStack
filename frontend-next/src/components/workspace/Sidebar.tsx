@@ -9,7 +9,7 @@ const NAV_ITEMS: { key: string; icon: string; label: string; hint?: string }[] =
 ];
 
 export function Sidebar({ ws }: { ws: ReturnType<typeof useWorkspace> }) {
-  const { sessions, activeSessionId, selectSession, newSession, sessionSearch, setSessionSearch, health } = ws;
+  const { sessions, sessionsLoading, activeSessionId, selectSession, newSession, sessionSearch, setSessionSearch, health } = ws;
 
   return (
     <aside className="sidebar">
@@ -32,9 +32,13 @@ export function Sidebar({ ws }: { ws: ReturnType<typeof useWorkspace> }) {
 
       <div className="sidebar-section-label">Sessions</div>
       <div className="sessions-list">
-        {sessions.length === 0 ? (
+        {sessionsLoading ? (
           <div style={{ padding: "16px 10px", color: "var(--text-muted)", fontSize: "12.5px" }}>
-            No sessions match &quot;{sessionSearch}&quot;
+            Loading sessions...
+          </div>
+        ) : sessions.length === 0 ? (
+          <div style={{ padding: "16px 10px", color: "var(--text-muted)", fontSize: "12.5px" }}>
+            {sessionSearch ? `No sessions match "${sessionSearch}"` : "No sessions yet"}
           </div>
         ) : (
           sessions.map((s) => (
