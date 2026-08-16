@@ -272,9 +272,9 @@ class DatabaseManager:
         conn = self.get_connection()
         try:
             messages = conn.execute(
-                '''SELECT * FROM chat_history 
-                   WHERE workspace_id = ? 
-                   ORDER BY timestamp DESC 
+                '''SELECT * FROM chat_history
+                   WHERE workspace_id = ?
+                   ORDER BY timestamp DESC, rowid DESC
                    LIMIT ? OFFSET ?''',
                 (workspace_id, limit, offset)
             ).fetchall()
