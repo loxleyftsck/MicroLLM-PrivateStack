@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, KeyRound, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { EmailInput } from "@/components/auth/EmailInput";
 import { PasswordInput } from "@/components/auth/PasswordInput";
@@ -12,6 +13,7 @@ type Status = "idle" | "loading" | "error" | "success";
 const API_URL = process.env.NEXT_PUBLIC_MICROLLM_API_URL ?? "http://localhost:8000";
 
 export function LoginForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<Status>("idle");
@@ -40,7 +42,7 @@ export function LoginForm() {
 
       window.localStorage.setItem("microllm_token", data.token);
       setStatus("success");
-      window.location.assign("/workspace");
+      router.push("/workspace");
     } catch {
       setStatus("error");
       setErrorMessage("Unable to sign in. Check your credentials and try again.");
@@ -57,7 +59,7 @@ export function LoginForm() {
       if (!res.ok) throw new Error("invalid_api_key");
       window.localStorage.setItem("microllm_token", apiKey);
       setApiKeyModalOpen(false);
-      window.location.assign("/workspace");
+      router.push("/workspace");
     } catch {
       setErrorMessage("Unable to authenticate with this API key.");
     }
