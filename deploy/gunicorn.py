@@ -1,16 +1,18 @@
 # Gunicorn Configuration for MicroLLM-PrivateStack
 # Production-grade WSGI server configuration
 
-import multiprocessing
-import os
-
 # Server socket
 bind = "0.0.0.0:8000"
 backlog = 2048
 
 # Worker processes
-workers = multiprocessing.cpu_count() * 2 + 1  # Recommended formula
-worker_class = "gevent"  # Async worker for better I/O handling
+# NOTE: Only 1 worker — the LLM (GGUF model) is loaded into process memory,
+# so each additional worker would load its own full copy of the model and
+# blow past the 2GB RAM budget this project is designed around. Concurrency
+# within the single worker comes from threads instead. Mirrors Dockerfile.
+workers = 1
+worker_class = "gthread"  # Threaded worker — avoids the extra `gevent` dependency
+threads = 4
 worker_connections = 1000
 timeout = 120  # Longer timeout for LLM inference
 keepalive = 5

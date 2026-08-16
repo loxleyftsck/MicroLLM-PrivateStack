@@ -2,20 +2,20 @@ name: MicroLLM CI
 
 on:
   push:
-    branches: [ "main", "develop", "release/*" ]
+    branches: [ "main", "develop", "qc", "production", "release/*" ]
   pull_request:
-    branches: [ "main", "develop" ]
+    branches: [ "main", "develop", "qc", "production" ]
 
 jobs:
   lint:
     name: Code Quality & Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v3
-    
+    - uses: actions/checkout@v4
+
     - name: Set up Python 3.11
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: "3.11"
     
@@ -88,12 +88,11 @@ jobs:
         mkdir -p models data logs
         touch models/deepseek-r1-1.5b-q4.gguf
         
-        # Run unit tests with coverage
-        pytest tests/test_unit.py -v --cov=backend --cov-report=xml --cov-report=term || echo "Some tests failed"
-      continue-on-error: true
-    
+        # Run tests using pytest.ini discovery (tests/unit/ by default)
+        pytest tests/unit/ -v -m "not slow" --cov=backend --cov-report=xml --cov-report=term
+
     - name: Upload coverage to artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: matrix.python-version == '3.11' && always()
       with:
         name: coverage-report
@@ -145,18 +144,36 @@ jobs:
     
     - name: Run integration tests
       run: |
-        # Skip integration tests for now as they need full model
-        echo "Integration tests skipped - require full LLM model"
-        # pytest tests/test_integration.py -v --tb=short || true
+        # Skip integration tests — require full LLM model
+        echo "Integration tests skipped — require full LLM model"
+        # Uncomment when model stubs are available:
+        # pytest tests/integration/ -v --tb=short || true
       continue-on-error: true
-    
+
     - name: Show server logs
       if: always()
       run: |
         cat logs/test_server.log || echo "No logs available"
-    
+
     - name: Stop server
       if: always()
       run: |
         pkill -f api_gateway.py || true
         sleep 2
+
+  # Gate job: QC branch → production gate
+  deploy-gate:
+    name: QC → Production Gate
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: github.ref == 'refs/heads/qc' && github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Verify QC criteria
+      run: |
+        echo "✅ lint passed"
+        echo "✅ unit tests passed"
+        echo "All QC gates passed — safe to merge qc → production"
+        echo ":rocket: Create a PR from qc to production to deploy."
