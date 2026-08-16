@@ -1,5 +1,5 @@
-import { WorkspacePlaceholder } from "@/components/workspace/WorkspacePlaceholder";
+import { WorkspaceApp } from "@/components/workspace/WorkspaceApp";
 
 export default function WorkspacePage() {
-  return <WorkspacePlaceholder />;
+  return <WorkspaceApp />;
 }
