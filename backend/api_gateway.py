@@ -49,6 +49,7 @@ from cache import LLMCache
 from rag_engine import RAGEngine
 from document_processor import DocumentProcessor
 from model_registry import model_registry  # Phase 5: model selector
+from model_downloader import download_manager  # Download missing models from the UI
 from ttft_optimizer import TTFTOptimizer, warmup_in_background  # Phase 5: TTFT < 50ms
 
 # Import security modules
@@ -812,6 +813,36 @@ def switch_model():
     except Exception as e:
         logger.error(f"Model switch failed: {e}")
         return jsonify({"error": "Failed to switch model"}), 500
+
+
+@app.route('/api/models/download', methods=['POST'])
+@auth.require_auth if auth else lambda f: f
+def download_model():
+    """
+    Start a background download for a catalogue model that isn't on disk
+    yet. Progress is polled via GET /api/models/download/status/<model_id>.
+    """
+    try:
+        data = request.get_json()
+        model_id = data.get("model_id", "").strip()
+        if not model_id:
+            return jsonify({"error": "model_id is required"}), 400
+
+        download_manager.start(model_id)
+        logger.info(f"Model download started: '{model_id}' by {getattr(request, 'user_email', 'unknown')}")
+        return jsonify({"status": "started", "model_id": model_id}), 202
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Model download start failed: {e}")
+        return jsonify({"error": "Failed to start download"}), 500
+
+
+@app.route('/api/models/download/status/<model_id>', methods=['GET'])
+@auth.require_auth if auth else lambda f: f
+def download_model_status(model_id):
+    """Poll progress for an in-flight or finished model download."""
+    return jsonify(download_manager.get_status(model_id)), 200
 
 
 @app.route('/api/security/status', methods=['GET'])
