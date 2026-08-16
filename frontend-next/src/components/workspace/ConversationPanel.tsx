@@ -78,7 +78,8 @@ function MessageBubble({ m, onToast }: { m: ChatMessage; onToast: (msg: string) 
 }
 
 export function ConversationPanel({ ws }: { ws: ReturnType<typeof useWorkspace> }) {
-  const { activeSession, sending, composerText, setComposerText, sendMessage, models, activeModel } = ws;
+  const { activeSession, sending, composerText, setComposerText, sendMessage, models, activeModel, loadingHistoryId } = ws;
+  const isLoadingHistory = activeSession != null && loadingHistoryId === activeSession.id;
   const messagesRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -100,7 +101,7 @@ export function ConversationPanel({ ws }: { ws: ReturnType<typeof useWorkspace> 
           <div>
             <div className="conv-title">{activeSession?.title ?? "New Session"}</div>
             <div className="conv-subtitle">
-              {activeSession && activeSession.messages.length <= 1 ? "Local session · created just now" : `Local session · ${activeSession?.time}`}
+              {activeSession ? `Session · ${activeSession.time}` : "No session selected"}
             </div>
           </div>
         </div>
@@ -113,7 +114,12 @@ export function ConversationPanel({ ws }: { ws: ReturnType<typeof useWorkspace> 
       </div>
 
       <div className="messages" ref={messagesRef}>
-        {activeSession?.messages.length === 0 && (
+        {isLoadingHistory && (
+          <div style={{ padding: "40px 20px", color: "var(--text-muted)", fontSize: 13, textAlign: "center" }}>
+            Loading history...
+          </div>
+        )}
+        {!isLoadingHistory && activeSession?.messages.length === 0 && (
           <div style={{ padding: "40px 20px", color: "var(--text-muted)", fontSize: 13, textAlign: "center" }}>
             Ask MicroLLM anything — inference runs locally against{" "}
             {activeModel ? activeModel.name : "the active model"}.

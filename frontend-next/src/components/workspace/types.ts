@@ -33,6 +33,7 @@ export interface Session {
   preview: string;
   time: string;
   messages: ChatMessage[];
+  historyLoaded: boolean;
 }
 
 export interface CurrentUser {

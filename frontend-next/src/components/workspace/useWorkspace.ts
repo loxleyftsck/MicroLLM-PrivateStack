@@ -42,13 +42,49 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function emptySession(): Session {
+// SQLite CURRENT_TIMESTAMP comes back as naive UTC "YYYY-MM-DD HH:MM:SS" —
+// force UTC parsing rather than letting the engine guess local time.
+function parseServerTimestamp(ts: string): Date {
+  return new Date(ts.replace(" ", "T") + "Z");
+}
+function formatHHMM(ts: string): string {
+  const d = parseServerTimestamp(ts);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function formatRelativeLabel(ts: string): string {
+  const d = parseServerTimestamp(ts);
+  const diffMin = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD < 7) return `${diffD}d ago`;
+  return d.toLocaleDateString();
+}
+
+interface ApiWorkspace {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+}
+
+interface ApiChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  message: string;
+  timestamp: string;
+}
+
+function workspaceToSession(w: ApiWorkspace): Session {
   return {
-    id: "session-" + Date.now(),
-    title: "New Session",
-    preview: "No messages yet",
-    time: "just now",
+    id: w.id,
+    title: w.name,
+    preview: w.description || "No messages yet",
+    time: formatRelativeLabel(w.created_at),
     messages: [],
+    historyLoaded: false,
   };
 }
 
@@ -63,9 +99,11 @@ export function useWorkspace() {
   const [activeModelId, setActiveModelId] = useState<string>("");
   const [switchingModel, setSwitchingModel] = useState(false);
 
-  const [sessions, setSessions] = useState<Session[]>(() => [emptySession()]);
-  const [activeSessionId, setActiveSessionId] = useState(() => sessions[0].id);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string>("");
   const [sessionSearch, setSessionSearch] = useState("");
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [loadingHistoryId, setLoadingHistoryId] = useState<string | null>(null);
 
   const [composerText, setComposerText] = useState("");
   const [sending, setSending] = useState(false);
@@ -181,11 +219,109 @@ export function useWorkspace() {
     }
   }, [addConsoleLine]);
 
+  const loadHistory = useCallback(
+    async (sessionId: string) => {
+      setLoadingHistoryId(sessionId);
+      try {
+        const res = await fetch(`${API_URL}/api/chat/history/${sessionId}`, { headers: authHeaders() });
+        if (!res.ok) throw new Error("history_failed");
+        const data = await res.json();
+        const rows: ApiChatMessage[] = data.history ?? [];
+        const messages: ChatMessage[] = rows.map((m) => ({
+          id: m.id,
+          role: m.role,
+          time: formatHHMM(m.timestamp),
+          text: m.message,
+        }));
+        const last = messages[messages.length - 1];
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === sessionId
+              ? {
+                  ...s,
+                  messages,
+                  historyLoaded: true,
+                  preview: last ? last.text : s.preview,
+                  time: last ? formatRelativeLabel(rows[rows.length - 1].timestamp) : s.time,
+                }
+              : s
+          )
+        );
+        addConsoleLine("info", `Loaded ${messages.length} messages from /api/chat/history`);
+      } catch {
+        addConsoleLine("error", "Failed to load chat history for session");
+      } finally {
+        setLoadingHistoryId((current) => (current === sessionId ? null : current));
+      }
+    },
+     
+    [addConsoleLine]
+  );
+
+  const createWorkspace = useCallback(
+    async (name: string): Promise<Session | null> => {
+      try {
+        const res = await fetch(`${API_URL}/api/workspaces`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ name }),
+        });
+        if (!res.ok) throw new Error("create_workspace_failed");
+        const data = await res.json();
+        const session: Session = {
+          id: data.workspace_id,
+          title: name,
+          preview: "No messages yet",
+          time: "just now",
+          messages: [],
+          historyLoaded: true,
+        };
+        return session;
+      } catch {
+        addConsoleLine("error", "Failed to create workspace");
+        showToast("Could not create a new session");
+        return null;
+      }
+    },
+     
+    [addConsoleLine, showToast]
+  );
+
+  const loadWorkspaces = useCallback(async () => {
+    setSessionsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/workspaces`, { headers: authHeaders() });
+      if (!res.ok) throw new Error("workspaces_failed");
+      const data = await res.json();
+      const rows: ApiWorkspace[] = data.workspaces ?? [];
+
+      let list = rows.map(workspaceToSession);
+      if (list.length === 0) {
+        const created = await createWorkspace("New Session");
+        if (created) list = [created];
+      }
+
+      setSessions(list);
+      if (list.length > 0) {
+        setActiveSessionId(list[0].id);
+        if (list[0].historyLoaded === false) {
+          await loadHistory(list[0].id);
+        }
+      }
+      addConsoleLine("info", `Loaded ${list.length} session(s) from /api/workspaces`);
+    } catch {
+      addConsoleLine("error", "Failed to load workspaces — sessions unavailable");
+    } finally {
+      setSessionsLoading(false);
+    }
+     
+  }, [addConsoleLine, createWorkspace, loadHistory]);
+
   useEffect(() => {
     async function bootstrap() {
       if (authStatus !== "authenticated") return;
       addConsoleLine("info", "System initialized");
-      await loadModels();
+      await Promise.all([loadModels(), loadWorkspaces()]);
     }
     bootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -301,18 +437,23 @@ export function useWorkspace() {
   }, []);
 
   // ------------------------------------------------------------------
-  // Sessions
+  // Sessions (backed by /api/workspaces + /api/chat/history)
   // ------------------------------------------------------------------
-  function newSession() {
-    const s = emptySession();
-    setSessions((prev) => [s, ...prev]);
-    setActiveSessionId(s.id);
+  async function newSession() {
+    const created = await createWorkspace("New Session");
+    if (!created) return;
+    setSessions((prev) => [created, ...prev]);
+    setActiveSessionId(created.id);
     closeMobilePanels();
   }
 
   function selectSession(id: string) {
     setActiveSessionId(id);
     closeMobilePanels();
+    const target = sessions.find((s) => s.id === id);
+    if (target && !target.historyLoaded) {
+      loadHistory(id);
+    }
   }
 
   const activeSession = sessions.find((s) => s.id === activeSessionId) ?? sessions[0];
@@ -330,6 +471,10 @@ export function useWorkspace() {
   async function sendMessage() {
     const text = composerText.trim();
     if (!text || sending) return;
+    if (!activeSessionId) {
+      showToast("No session available — try again in a moment");
+      return;
+    }
 
     const userMsg: ChatMessage = { id: uid(), role: "user", time: nowHHMM(), text };
     setSessions((prev) =>
@@ -354,7 +499,7 @@ export function useWorkspace() {
       const res = await fetch(`${API_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ message: text, max_tokens: 128 }),
+        body: JSON.stringify({ message: text, max_tokens: 128, workspace_id: activeSessionId }),
       });
       const elapsedMs = Math.round(performance.now() - startedRequestAt);
       const data = await res.json();
@@ -441,6 +586,8 @@ export function useWorkspace() {
     switchingModel,
     switchModel,
     sessions: filteredSessions,
+    sessionsLoading,
+    loadingHistoryId,
     activeSession,
     activeSessionId,
     selectSession,
