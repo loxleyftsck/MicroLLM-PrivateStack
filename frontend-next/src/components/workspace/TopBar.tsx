@@ -2,7 +2,17 @@ import { Icon } from "./Icon";
 import type { useWorkspace } from "./useWorkspace";
 
 export function TopBar({ ws }: { ws: ReturnType<typeof useWorkspace> }) {
-  const { activeModel, models, fmtSize, dropdownOpen, setDropdownOpen, switchModel, switchingModel } = ws;
+  const {
+    activeModel,
+    models,
+    fmtSize,
+    dropdownOpen,
+    setDropdownOpen,
+    switchModel,
+    switchingModel,
+    downloads,
+    downloadModel,
+  } = ws;
 
   return (
     <header className="topbar">
@@ -47,11 +57,58 @@ export function TopBar({ ws }: { ws: ReturnType<typeof useWorkspace> }) {
               const label =
                 m.status === "running" ? "RUNNING" : m.status === "loading" ? "LOADING" : m.status === "unavailable" ? "UNAVAILABLE" : "AVAILABLE";
               const dotClass = m.status === "running" ? "running" : m.status === "loading" ? "loading" : "";
+              const dl = downloads[m.id];
+
+              if (m.status === "unavailable") {
+                return (
+                  <div key={m.id} className="model-option model-option-download">
+                    <span className="model-status-dot" />
+                    <span className="model-option-info">
+                      <div className="model-option-name">{m.name}</div>
+                      <div className="model-option-meta">
+                        {m.params} · {m.quant} · {fmtSize(m.sizeGb)}
+                      </div>
+                      {dl?.status === "downloading" && (
+                        <>
+                          <div className="progress-track" style={{ marginTop: 6 }}>
+                            <div className="progress-fill" style={{ width: `${dl.percent}%` }} />
+                          </div>
+                          <div className="model-option-meta" style={{ marginTop: 2 }}>
+                            {dl.downloadedMb.toFixed(0)} / {dl.totalMb.toFixed(0)} MB ({dl.percent.toFixed(0)}%)
+                          </div>
+                        </>
+                      )}
+                      {dl?.status === "failed" && (
+                        <div className="model-option-meta" style={{ color: "var(--error)", marginTop: 2 }}>
+                          {dl.error ?? "Download failed"}
+                        </div>
+                      )}
+                    </span>
+                    {dl?.status === "downloading" ? (
+                      <span className="model-option-state loading">DOWNLOADING</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="composer-tool-btn icon-only"
+                        title="Download this model"
+                        aria-label={`Download ${m.name}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadModel(m.id);
+                        }}
+                      >
+                        <Icon id="i-download" size={14} />
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <button
                   key={m.id}
                   className="model-option"
-                  disabled={m.status === "loading" || m.status === "unavailable" || switchingModel}
+                  disabled={m.status === "loading" || switchingModel}
                   role="option"
                   aria-selected={m.id === activeModel?.id}
                   onClick={() => {

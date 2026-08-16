@@ -56,3 +56,13 @@ export interface TtftStats {
   p50Ms: number | null;
   samples: number;
 }
+
+export type DownloadStatus = "idle" | "downloading" | "completed" | "failed";
+
+export interface DownloadProgress {
+  status: DownloadStatus;
+  downloadedMb: number;
+  totalMb: number;
+  percent: number;
+  error: string | null;
+}

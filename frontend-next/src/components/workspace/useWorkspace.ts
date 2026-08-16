@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type {
   ChatMessage,
   CurrentUser,
+  DownloadProgress,
   HealthSnapshot,
   ModelStatus,
   RagSource,
@@ -98,6 +99,8 @@ export function useWorkspace() {
   const [models, setModels] = useState<WorkspaceModel[]>([]);
   const [activeModelId, setActiveModelId] = useState<string>("");
   const [switchingModel, setSwitchingModel] = useState(false);
+  const [downloads, setDownloads] = useState<Record<string, DownloadProgress>>({});
+  const downloadPollTimers = useRef<Record<string, ReturnType<typeof setInterval>>>({});
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
@@ -363,6 +366,95 @@ export function useWorkspace() {
   }
 
   // ------------------------------------------------------------------
+  // Model downloads — POST /api/models/download, poll for progress
+  // ------------------------------------------------------------------
+  function stopDownloadPolling(modelId: string) {
+    const timer = downloadPollTimers.current[modelId];
+    if (timer) {
+      clearInterval(timer);
+      delete downloadPollTimers.current[modelId];
+    }
+  }
+
+  useEffect(() => {
+    const timers = downloadPollTimers.current;
+    return () => {
+      Object.values(timers).forEach(clearInterval);
+    };
+  }, []);
+
+  function pollDownloadStatus(modelId: string) {
+    if (downloadPollTimers.current[modelId]) return;
+
+    const tick = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/models/download/status/${modelId}`, {
+          headers: authHeaders(),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const progress: DownloadProgress = {
+          status: data.status ?? "idle",
+          downloadedMb: data.downloaded_mb ?? 0,
+          totalMb: data.total_mb ?? 0,
+          percent: data.percent ?? 0,
+          error: data.error ?? null,
+        };
+        setDownloads((prev) => ({ ...prev, [modelId]: progress }));
+
+        if (progress.status === "completed") {
+          stopDownloadPolling(modelId);
+          addConsoleLine("info", `Model download complete: ${modelId}`);
+          showToast("Model downloaded — ready to select");
+          await loadModels();
+        } else if (progress.status === "failed") {
+          stopDownloadPolling(modelId);
+          addConsoleLine("error", `Model download failed: ${progress.error ?? "unknown error"}`);
+          showToast("Model download failed");
+        }
+      } catch {
+        /* transient network hiccup — keep polling */
+      }
+    };
+
+    tick();
+    downloadPollTimers.current[modelId] = setInterval(tick, 1000);
+  }
+
+  async function downloadModel(modelId: string) {
+    const target = models.find((m) => m.id === modelId);
+    if (!target || target.status !== "unavailable") return;
+    if (downloads[modelId]?.status === "downloading") return;
+
+    setDownloads((prev) => ({
+      ...prev,
+      [modelId]: { status: "downloading", downloadedMb: 0, totalMb: 0, percent: 0, error: null },
+    }));
+    addConsoleLine("info", `Starting download: ${target.name}`);
+
+    try {
+      const res = await fetch(`${API_URL}/api/models/download`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ model_id: modelId }),
+      });
+      if (!res.ok && res.status !== 202) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to start download");
+      }
+      pollDownloadStatus(modelId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to start download";
+      setDownloads((prev) => ({
+        ...prev,
+        [modelId]: { status: "failed", downloadedMb: 0, totalMb: 0, percent: 0, error: message },
+      }));
+      addConsoleLine("error", message);
+      showToast(message);
+    }
+  }
+
+  // ------------------------------------------------------------------
   // Health / metrics polling (real backend telemetry)
   // ------------------------------------------------------------------
   useEffect(() => {
@@ -585,6 +677,8 @@ export function useWorkspace() {
     activeModelId,
     switchingModel,
     switchModel,
+    downloads,
+    downloadModel,
     sessions: filteredSessions,
     sessionsLoading,
     loadingHistoryId,
