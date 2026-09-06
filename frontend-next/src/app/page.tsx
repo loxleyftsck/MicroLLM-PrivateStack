@@ -1,5 +1,5 @@
-import { LoginShell } from "@/components/auth/LoginShell";
+import { LandingPage } from "@/components/landing/LandingPage";
 
 export default function Home() {
-  return <LoginShell />;
+  return <LandingPage />;
 }

@@ -13,8 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MicroLLM PrivateStack — Sign In",
-  description: "Private local AI workspace for developers.",
+  title: {
+    default: "MicroLLM PrivateStack — Private AI at the speed of localhost",
+    template: "%s · MicroLLM PrivateStack",
+  },
+  description:
+    "Run a real LLM entirely on your own hardware: chat, RAG with citations, and model hot-swap in 2GB of RAM, with nothing leaving the machine.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
