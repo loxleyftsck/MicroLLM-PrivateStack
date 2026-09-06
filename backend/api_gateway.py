@@ -574,15 +574,27 @@ def model_info():
 @auth.require_auth if auth else lambda f: f  # ASVS V4 — model reload must be authenticated; unauthenticated reload = DoS vector
 def debug_reload():
     """Debug endpoint to reload model — requires authentication"""
-    global llm_engine
-    
+    global cached_engine, llm_engine
+
     logger.info(f"Manual model reload requested by user {getattr(request, 'user_email', 'unknown')}")
-    llm_engine = LLMEngine(llm_config)
-    
+
+    # Rebuild through the cached engine (same wiring as startup / switch_model) so
+    # that /health and /api/model/info keep returning the nested CachedLLMEngine
+    # shape, and so /api/chat and the batch processor pick up the reloaded engine.
+    cached_engine = create_cached_engine(
+        llm_config,
+        similarity_threshold=0.95,
+        redis_client=cache_manager.redis_client if cache_manager and cache_manager.enabled else None
+    )
+    llm_engine = cached_engine
+
+    if BATCH_ENABLED:
+        raw_batch_processor.llm_engine = cached_engine
+
     return jsonify({
         "status": "reloaded",
         "model_loaded": llm_engine.model_loaded,
-        "info": llm_engine.get_model_info()
+        "info": cached_engine.llm.get_model_info()
     }), 200
 
 
